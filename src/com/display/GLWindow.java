@@ -8,6 +8,7 @@ import javax.media.opengl.awt.GLCanvas;
 import javax.swing.JFrame;
 
 import com.detector.Grid;
+import com.detector.HexDetector;
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.FPSAnimator;
 
@@ -23,7 +24,7 @@ public class GLWindow extends JFrame {
 	GLCapabilities glCapabilities;
 	GLCanvas glCanvas;
 	
-	Grid g = new Grid();
+	HexDetector h = new HexDetector();
 	
 	public GLWindow(String title) { 
 		super(title);
@@ -55,7 +56,7 @@ public class GLWindow extends JFrame {
             
             @Override
             public void display( GLAutoDrawable glautodrawable ) {
-                Screen.render( glautodrawable.getGL().getGL2(), glautodrawable.getWidth(), glautodrawable.getHeight(), g );
+                Screen.render( glautodrawable.getGL().getGL2(), glautodrawable.getWidth(), glautodrawable.getHeight(), h);
             }
         });
 		

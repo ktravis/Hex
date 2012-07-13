@@ -9,6 +9,7 @@ import javax.media.opengl.glu.GLU;
 import java.nio.Buffer;
 
 import com.detector.Grid;
+import com.detector.HexDetector;
 import com.jogamp.common.nio.Buffers;
 
 public class Screen {
@@ -28,7 +29,7 @@ public class Screen {
         gl2.glViewport( 0, 0, width, height );
     }
 	
-	protected static void render(GL2 gl2, int width, int height, Grid g ) {
+	protected static void render(GL2 gl2, int width, int height, HexDetector h) {
         gl2.glClear( GL.GL_COLOR_BUFFER_BIT );
 
         // draw a triangle filling the window
@@ -37,8 +38,11 @@ public class Screen {
         gl2.glPushMatrix();
         gl2.glTranslatef(0, 0, -5);
         
-        g.draw(gl2);
-        gl2.glPopMatrix();
+		
+        h.draw(gl2);
+		
+
+		gl2.glPopMatrix();
         
         
     }

@@ -16,26 +16,35 @@ public class Grid {
 	boolean isActive() { return active; }
 	void setActive(boolean a) { active = a; }
 	void toggleActive() { active = !active; }
-	private ArrayList<Tile> tiles;
+	private tileType[] types;
+	
+	// enum "Type" describes the placement of the tile on the grid
+	public enum tileType {
+		CENTER, TOP_CORNER, UL_EDGE, UR_EDGE, 
+		UL_CORNER, UR_CORNER, LL_CORNER, LR_CORNER, 
+		LL_EDGE, LR_EDGE, BOTTOM_CORNER, SPLIT_LEFT, SPLIT_RIGHT //split left/right refers to REMAINING half of tile, relative to initial tile numbering (right to left, top to bottom)
+	}
+	
 	
 	public Grid() {
-		tiles = new ArrayList<Tile>();
+		types = new tileType[MAX_TILES];
 		fill();
-		System.out.println("filling...");
+		
 	}
 	
 	void fill() {
-		if (tiles == null) return;
+		if (types == null) return;
+		System.out.println("filling...");
 		
 		int rowSize = 6;
 		int index = 0;
 		
-		Tile.Type startType = Tile.Type.CENTER;
-		Tile.Type endType = Tile.Type.CENTER;
+		tileType startType = tileType.CENTER;
+		tileType endType = tileType.CENTER;
 		
 		for (int row = 0; row < MAX_ROWS; row++) {
 			if (row == 8 || row == 11 || row ==	27 || row == 30) {
-				startType = endType = Tile.Type.CENTER;
+				startType = endType = tileType.CENTER;
 				
 				switch (row) {
 				case 8: rowSize = 28; break;
@@ -44,20 +53,20 @@ public class Grid {
 				case 30: rowSize = 28; break;
 				}
 			} else if (row < 11 && row > 8) {
-				startType = Tile.Type.UR_CORNER;
-				endType = Tile.Type.UL_CORNER;
+				startType = tileType.UR_CORNER;
+				endType = tileType.UL_CORNER;
 				rowSize = 28 + (row - 8);
 			} else if (row < 8) {
-				startType = Tile.Type.UR_EDGE;
-				endType = Tile.Type.UL_EDGE;
+				startType = tileType.UR_EDGE;
+				endType = tileType.UL_EDGE;
 				rowSize = 6 + row*3;
 			} else if (row < 27 && row > 11) {
 				if (row % 2 == 0) {
-					startType = Tile.Type.SPLIT_LEFT;
-					endType = Tile.Type.SPLIT_RIGHT;
+					startType = tileType.SPLIT_LEFT;
+					endType = tileType.SPLIT_RIGHT;
 					rowSize = 32;
 				} else {
-					startType = endType = Tile.Type.CENTER;
+					startType = endType = tileType.CENTER;
 					rowSize = 31;
 				}
 				
@@ -76,19 +85,19 @@ public class Grid {
 				}
 				
 			} else if (row < 30 && row > 27) {
-				startType = Tile.Type.LR_CORNER;
-				endType = Tile.Type.LL_CORNER;
+				startType = tileType.LR_CORNER;
+				endType = tileType.LL_CORNER;
 				rowSize = 31 - (row - 27);
 			} else if (row > 30) {
-				startType = Tile.Type.LR_EDGE;
-				endType = Tile.Type.LL_EDGE;
+				startType = tileType.LR_EDGE;
+				endType = tileType.LL_EDGE;
 				rowSize = 27 - (row - 31)*3;
 			}
 			
 			
 			for (int i = 0; i < rowSize; i++) {
 				
-				Tile.Type t = Tile.Type.CENTER;
+				tileType t = tileType.CENTER;
 
 				if (i == 0) {
 					t = startType;
@@ -97,47 +106,35 @@ public class Grid {
 				}
 				
 				if (row == 15 || row == 23) {
-					if (i == 15) t = Tile.Type.SPLIT_RIGHT;
-					else if (i == 16) t = Tile.Type.SPLIT_LEFT;
+					if (i == 15) t = tileType.SPLIT_RIGHT;
+					else if (i == 16) t = tileType.SPLIT_LEFT;
 				} else if (row == 16 || row == 22) {
 					if (i > 12 && i < 25) {
-						if (i % 2 == 0) t = Tile.Type.SPLIT_LEFT;
-						else t = Tile.Type.SPLIT_RIGHT;
+						if (i % 2 == 0) t = tileType.SPLIT_LEFT;
+						else t = tileType.SPLIT_RIGHT;
 					}
 				} else if (row == 17 || row == 19 || row == 21) {
 					if (i > 11 && i < 26) {
-						if (i % 2 == 0) t = Tile.Type.SPLIT_RIGHT;
-						else t = Tile.Type.SPLIT_LEFT;
+						if (i % 2 == 0) t = tileType.SPLIT_RIGHT;
+						else t = tileType.SPLIT_LEFT;
 					}
 				} else if (row == 18 || row == 20) {
 					if (i > 11 && i < 28) {
-						if (i % 2 == 0) t = Tile.Type.SPLIT_RIGHT;
-						else t = Tile.Type.SPLIT_LEFT;
+						if (i % 2 == 0) t = tileType.SPLIT_RIGHT;
+						else t = tileType.SPLIT_LEFT;
 					}
 				}
 				
-				if (index == 2 || index == 3) t = Tile.Type.TOP_CORNER;
-				if (index == 1020 || index == 1021) t = Tile.Type.BOTTOM_CORNER;
+				if (index == 2 || index == 3) t = tileType.TOP_CORNER;
+				if (index == 1020 || index == 1021) t = tileType.BOTTOM_CORNER;
 				
-				Tile newTile = new Tile(this, t);
-				newTile.setRow(row);
-				
-				tiles.add(newTile);
+				types[index] = t;
 				
 				index += 1;
 				
 			}
 		}
 		
-	}
-	
-	void add(Tile t) {
-		if (tiles == null || tiles.size() == MAX_TILES) return;
-		tiles.add(t);
-	}
-	
-	Tile getTile(int i) {
-		return tiles.get(i);
 	}
 	
 	//WRONG, fix
@@ -165,24 +162,25 @@ public class Grid {
 		return n;
 	}
 	
-	void remove(Tile t) {
-		tiles.remove(t);
-	}
-	void remove(int ind) {
-		tiles.remove(ind);
-	}
-	void clear() {
-		if (tiles != null) tiles.clear();
+	public tileType getType(int i) {
+		return types[i];
 	}
 	
 	public void draw(GL2 gl2) {
-//		ListIterator<Tile> li = tiles.listIterator();
-//		while (li.hasNext()) {
-//			Tile t = li.next();
-//			t.draw(gl2);
+//		for (int i = 0; i < types.length; i++) {
+			gl2.glBegin(gl2.GL_TRIANGLE_FAN);
+			
+			gl2.glColor3f(1, 1, 1);
+			float[] v = HexDetector.getArrays(types[2])[0];
+			
+			for (int j = 0; j < v.length; j+=3) {
+				gl2.glVertex3f(v[j], v[j+1], v[j+2]);
+			}
+			gl2.glEnd();
 //		}
-		getTile(1021).draw(gl2);
 	}
 	
 }
+
+
 	
