@@ -1,0 +1,56 @@
+{\rtf1\ansi\ansicpg1252\cocoartf949\cocoasubrtf540
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww16240\viewh7480\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural\pardirnatural
+
+\f0\fs24 \cf0 This program translates pixel addresses for the hamamatsu wafers\
+you tell it a pixel address, and which address scheme that address is from, and it returns the corresponding pixel address in the desired address scheme or returns the cartesian coordinates (in micrometers) of that pixel with the coordinate origin at the center of the wafer\
+\
+returned coordinates are always for the center of the pixel except for non-hexagonal pixels on the edge of the wafer\
+coordinates for non-hexagonal pixels on the edge are given for the center of the pixel as if it were a complete hexagon\
+\
+I wrote this current version to function as  a user prompted calculator accessed from the terminal\
+I intend to use this, or a slightly modified version, to be called by other programs for purposes such as plotting data taken by the detector\
+\
+"pixel_translate.py" and "pixellist.csv" must be in the same directory for the program to operate\
+\
+a typical use would look like this:\
+\
+d131-186:Desktop dylanmead$ python pixel_translate.py 630 k c\
+-43875\
+-33126\
+\
+here I have asked for the coordinates of pixel 630 in the kpix gui numbering scheme\
+the "k" means that 630 refers to the kpix gui numbering scheme\
+the "c" means that I am requesting coordinates\
+the output can be interpreted: this pixel is 43875 micrometers to the left of center and 33126 below the center\
+it returns what we would conventionally consider the X coordinate and then the Y coordinate\
+\
+another use might be:\
+\
+d131-186:Desktop dylanmead$ python pixel_translate.py 630 k h\
+102\
+\
+here I asked what is the address of pixel 630(kpix gui scheme) in the hama scheme\
+\
+just to belabor the point:\
+\
+d131-186:Desktop dylanmead$ python pixel_translate.py 79 h c\
+-47250\
+-31177\
+\
+in the hama scheme pixel 79 shares an edge with pixel 102. we can see that 79 is to the left and up from 102\
+\
+\
+\
+\
+##author: Dylan Mead, University of Oregon\
+##purpose: to translate pixel addresses for Hama 2 wafer\
+##input: known pixel number, address scheme for input pixel number\
+##output: corresponding address or cartesian coordinate (origin at center)\
+##usage: python pixel_translate.py (known/input pixel, int from [1,1024]) (address scheme of input pixel, h or k (see below)) (desired output format, h or k or c (see below))\
+##data containing file "pixellist" must be in same directory as "pixel_translate.py"\
+\
+\
+}
