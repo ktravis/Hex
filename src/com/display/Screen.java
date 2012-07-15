@@ -21,7 +21,7 @@ public class Screen {
 
         // coordinate system origin at lower left with width and height same as the window
         GLU glu = new GLU();
-        glu.gluPerspective( 90.0f, 720.0f/540f, 0.1f, 100.0f );
+        glu.gluPerspective( 90.0f, (1.0f*width)/height, 0.01f, 1000.0f );
 
         gl2.glMatrixMode( GL2.GL_MODELVIEW );
         gl2.glLoadIdentity();
@@ -30,20 +30,13 @@ public class Screen {
     }
 	
 	protected static void render(GL2 gl2, int width, int height, HexDetector h) {
-        gl2.glClear( GL.GL_COLOR_BUFFER_BIT );
+        gl2.glClear( GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
 
         // draw a triangle filling the window
         gl2.glLoadIdentity();
 
-        gl2.glPushMatrix();
-        gl2.glTranslatef(0, 0, -5);
-        
 		
         h.draw(gl2);
-		
-
-		gl2.glPopMatrix();
-        
         
     }
 	

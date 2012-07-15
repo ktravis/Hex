@@ -1,33 +1,82 @@
 package com.detector;
 
-import java.nio.FloatBuffer;
 import java.util.ArrayList;
-import java.util.ListIterator;
-
 import javax.media.opengl.GL2;
+import util.Data;
 
-import com.detector.Grid.tileType;
-import com.display.Screen;
 
 public class HexDetector {
 	ArrayList<Grid> layers = new ArrayList<Grid>();
 	private int active = 0;
+	private float centralAxisDepth;
+	private float yaw;
+	private float pitch;
 
 	public void setActive(int i) { active = i; }
 	public void addLayer(Grid g) { layers.add(g); }
 	public Grid getLayer(int i) { return layers.get(i); } 
 	
-	float[] v = getArrays(tileType.CENTER)[0];
+	float[][] v;
+	
+	float[] x;
+	float[] y;
+	
+	Grid g;
+	
 	
 	public HexDetector() {
 		layers.add(new Grid());
-		Grid g = layers.get(0);
+		g = layers.get(0);
 		active = 0;
 		g.setActive(true);
+		
+		String[] temp = Data.fileRead("res/test.txt");
+		x = new float[temp.length];
+		y = new float[temp.length];
+		
+		for (int i = 0; i < temp.length; i++) {
+			x[i] = Float.valueOf(temp[i].split(" ")[0]);
+			y[i] = Float.valueOf(temp[i].split(" ")[1]);
+		}
+		
+		v = new float[Grid.tileType.values().length][];
+		
+		for (Grid.tileType t : Grid.tileType.values()) {
+			v[t.ordinal()] = getArrays(t)[0];
+		}
+		
+		pitch = yaw = 0;
+		updateOrientation(0, 0);
 	}
 	
 	public void draw(GL2 gl2) {
-		layers.get(0).draw(gl2);
+		gl2.glPushMatrix();
+		gl2.glTranslatef(0, 0, -centralAxisDepth - 65);
+		gl2.glRotatef(0, 0, 1, 0);
+		gl2.glRotatef(0, 1, 0, 0);
+		
+		for (int index = 0; index < 1024; index++) {
+			gl2.glPushMatrix();
+			gl2.glTranslatef(y[index]/850, -x[index]/850, 0);
+			
+			
+			gl2.glBegin(GL2.GL_TRIANGLE_FAN);
+			gl2.glColor4f(1, 1, 1, 0.8f);
+			float[] verts = v[g.getType(index).ordinal()];
+			
+			for (int j = 0; j < verts.length; j+=3) {
+				gl2.glVertex3f(verts[j], verts[j+1], verts[j+2]);
+			}
+			gl2.glEnd();
+			
+			gl2.glPopMatrix();
+		}
+		gl2.glPopMatrix();
+		
+	}
+	
+	public void updateOrientation(float dx, float dy) {
+		centralAxisDepth = 20 + active * 20;
 		
 	}
 	

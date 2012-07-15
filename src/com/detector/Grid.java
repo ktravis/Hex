@@ -6,7 +6,7 @@ import java.util.ListIterator;
 import javax.media.opengl.GL2;
 
 public class Grid {
-	public static float TILE_WIDTH = 10;
+	public static float TILE_WIDTH = 5;
 	public static float TILE_HALF_WIDTH = TILE_WIDTH/2;
 	public static int MAX_ROW_SIZE = 30;
 	public static int MAX_ROWS = 39;
@@ -34,7 +34,7 @@ public class Grid {
 	
 	void fill() {
 		if (types == null) return;
-		System.out.println("filling...");
+		System.out.print("Filling...");
 		
 		int rowSize = 6;
 		int index = 0;
@@ -135,6 +135,8 @@ public class Grid {
 			}
 		}
 		
+		System.out.print(" done.\n");
+		
 	}
 	
 	//WRONG, fix
@@ -168,15 +170,15 @@ public class Grid {
 	
 	public void draw(GL2 gl2) {
 //		for (int i = 0; i < types.length; i++) {
-			gl2.glBegin(gl2.GL_TRIANGLE_FAN);
-			
-			gl2.glColor3f(1, 1, 1);
-			float[] v = HexDetector.getArrays(types[2])[0];
-			
-			for (int j = 0; j < v.length; j+=3) {
-				gl2.glVertex3f(v[j], v[j+1], v[j+2]);
-			}
-			gl2.glEnd();
+//			gl2.glBegin(gl2.GL_TRIANGLE_FAN);
+//			
+//			gl2.glColor3f(1, 1, 1);
+//			float[] v = HexDetector.getArrays(types[2])[0];
+//			
+//			for (int j = 0; j < v.length; j+=3) {
+//				gl2.glVertex3f(v[j], v[j+1], v[j+2]);
+//			}
+//			gl2.glEnd();
 //		}
 	}
 	

@@ -9,10 +9,15 @@ import javax.swing.JFrame;
 
 import com.detector.Grid;
 import com.detector.HexDetector;
+import com.jogamp.newt.event.KeyAdapter;
+import com.jogamp.newt.event.KeyEvent;
+import com.jogamp.newt.event.KeyListener;
 import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.FPSAnimator;
 
 import java.awt.BorderLayout;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -34,8 +39,6 @@ public class GLWindow extends JFrame {
 		glCanvas = new GLCanvas(glCapabilities);
 		
 		setup();
-		
-		
 	}
 	
 	void setup() {
