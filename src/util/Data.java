@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 
 public class Data {
@@ -43,4 +44,12 @@ public class Data {
 		
 		return lines;
 	}
+	
+	public static FloatBuffer asFloatBuffer(float... args) {
+		FloatBuffer buffer = FloatBuffer.allocate(args.length * 4);
+		buffer.put(args);
+		buffer.flip();
+		return buffer;
+	}
+	
 }

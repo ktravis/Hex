@@ -7,19 +7,20 @@ import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.awt.GLCanvas;
 import javax.swing.JFrame;
 
-import com.detector.Grid;
+import util.KeyHandler;
+import util.MouseHandler;
+
 import com.detector.HexDetector;
-import com.jogamp.newt.event.KeyAdapter;
-import com.jogamp.newt.event.KeyEvent;
-import com.jogamp.newt.event.KeyListener;
-import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.FPSAnimator;
 
 import java.awt.BorderLayout;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+
+import com.jogamp.newt.event.*;
+import com.jogamp.newt.event.awt.AWTKeyAdapter;
+import com.jogamp.newt.event.awt.AWTMouseAdapter;
 
 
 public class GLWindow extends JFrame {
@@ -63,13 +64,18 @@ public class GLWindow extends JFrame {
             }
         });
 		
-		//BROKEN
 		this.addWindowListener( new WindowAdapter() {
-			public void windowClosing() {
+			public void windowClosing(WindowEvent e) {
 				dispose();
 				System.exit(0);
 			}
 		});
+		
+		MouseHandler inputHandler = new MouseHandler(h);
+		new AWTMouseAdapter(inputHandler).addTo(glCanvas);
+		
+		KeyHandler keyHandler = new KeyHandler(this, h);
+		new AWTKeyAdapter(keyHandler).addTo(glCanvas);
 		
 		this.getContentPane().add(glCanvas, BorderLayout.CENTER);
 		this.setSize(DISPLAY_WIDTH, DISPLAY_HEIGHT);
@@ -79,6 +85,11 @@ public class GLWindow extends JFrame {
 		animator.add(glCanvas);
 		animator.start();
 		
+	}
+	
+	public void destroy() {
+		this.dispose();
+		System.exit(0);
 	}
 	
 	public static void main(String[] args) {

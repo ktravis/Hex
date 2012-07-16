@@ -1,9 +1,5 @@
 package com.detector;
 
-import java.util.ArrayList;
-import java.util.ListIterator;
-
-import javax.media.opengl.GL2;
 
 public class Grid {
 	public static float TILE_WIDTH = 5;
@@ -12,13 +8,17 @@ public class Grid {
 	public static int MAX_ROWS = 39;
 	public static int MAX_TILES = 1024;
 	
+	private int index = 0;
+	int index() { return index; }
+	
 	private boolean active = false;
 	boolean isActive() { return active; }
 	void setActive(boolean a) { active = a; }
 	void toggleActive() { active = !active; }
 	private tileType[] types;
+	tileType[] typeList() { return types; }
 	
-	// enum "Type" describes the placement of the tile on the grid
+	// enum "tileType" describes the placement of the tile on the grid
 	public enum tileType {
 		CENTER, TOP_CORNER, UL_EDGE, UR_EDGE, 
 		UL_CORNER, UR_CORNER, LL_CORNER, LR_CORNER, 
@@ -29,7 +29,11 @@ public class Grid {
 	public Grid() {
 		types = new tileType[MAX_TILES];
 		fill();
-		
+	}
+	
+	public Grid(Grid template) {
+		types = new tileType[MAX_TILES];
+		types = template.typeList();
 	}
 	
 	void fill() {
@@ -166,20 +170,6 @@ public class Grid {
 	
 	public tileType getType(int i) {
 		return types[i];
-	}
-	
-	public void draw(GL2 gl2) {
-//		for (int i = 0; i < types.length; i++) {
-//			gl2.glBegin(gl2.GL_TRIANGLE_FAN);
-//			
-//			gl2.glColor3f(1, 1, 1);
-//			float[] v = HexDetector.getArrays(types[2])[0];
-//			
-//			for (int j = 0; j < v.length; j+=3) {
-//				gl2.glVertex3f(v[j], v[j+1], v[j+2]);
-//			}
-//			gl2.glEnd();
-//		}
 	}
 	
 }

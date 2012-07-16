@@ -1,16 +1,11 @@
 package com.display;
 
-import java.nio.FloatBuffer;
-
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
 import javax.media.opengl.glu.GLU;
 
-import java.nio.Buffer;
-
-import com.detector.Grid;
 import com.detector.HexDetector;
-import com.jogamp.common.nio.Buffers;
+
 
 public class Screen {
 	
@@ -27,23 +22,23 @@ public class Screen {
         gl2.glLoadIdentity();
 
         gl2.glViewport( 0, 0, width, height );
+        
+        gl2.glEnable(GL2.GL_DEPTH_TEST);
+        gl2.glDepthFunc(GL2.GL_LEQUAL);
+        
+        
+        gl2.glEnable(GL2.GL_BLEND);
+        gl2.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
+        
     }
 	
 	protected static void render(GL2 gl2, int width, int height, HexDetector h) {
-        gl2.glClear( GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
+        gl2.glClear( GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT );
 
-        // draw a triangle filling the window
         gl2.glLoadIdentity();
-
 		
         h.draw(gl2);
         
     }
 	
-	public static FloatBuffer asFloatBuffer(float... args) {
-		FloatBuffer buffer = FloatBuffer.allocate(args.length * 4);
-		buffer.put(args);
-		buffer.flip();
-		return buffer;
-	}
 }
