@@ -1,10 +1,17 @@
 package com.display;
 
+import java.io.File;
+import java.io.IOException;
+
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
+import javax.media.opengl.GLException;
 import javax.media.opengl.glu.GLU;
 
+import util.Data;
+
 import com.detector.HexDetector;
+import com.jogamp.opengl.util.awt.Screenshot;
 
 
 public class Screen {
@@ -40,5 +47,6 @@ public class Screen {
         h.draw(gl2);
         
     }
+	
 	
 }

@@ -1,7 +1,9 @@
 package com.display;
 
 import javax.media.opengl.GLAutoDrawable;
+import javax.media.opengl.GLContext;
 import javax.media.opengl.GLEventListener;
+import javax.media.opengl.GLException;
 import javax.media.opengl.GLProfile;
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.awt.GLCanvas;
@@ -13,10 +15,18 @@ import util.MouseHandler;
 
 import com.detector.HexDetector;
 import com.jogamp.opengl.util.FPSAnimator;
+import com.jogamp.opengl.util.awt.Screenshot;
 
 import java.awt.BorderLayout;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.IOException;
+
+import jogamp.newt.driver.awt.AWTCanvas;
+import jogamp.newt.driver.awt.AWTDisplay;
+import jogamp.newt.driver.awt.AWTEDTUtil;
+import jogamp.opengl.awt.AWTUtil;
 
 import com.jogamp.newt.event.awt.AWTKeyAdapter;
 import com.jogamp.newt.event.awt.AWTMouseAdapter;
@@ -31,6 +41,8 @@ public class GLWindow extends JFrame {
 	String[] dataString;
 	
 	HexDetector h;
+	boolean capturing = false;
+	File currCapture;
 	
 	public GLWindow(String title) { 
 		super(title);
@@ -61,6 +73,23 @@ public class GLWindow extends JFrame {
             @Override
             public void display( GLAutoDrawable glautodrawable ) {
                 Screen.render( glautodrawable.getGL().getGL2(), glautodrawable.getWidth(), glautodrawable.getHeight(), h);
+                
+                if (capturing) {
+                	try {
+                		System.out.print(String.format("Capturing file '%s'...", currCapture.toString()));
+						if (!Data.NO_TGA) {
+							Screenshot.writeToTargaFile(currCapture, glCanvas.getWidth(), glCanvas.getHeight());
+						} else {
+							Screenshot.writeToFile(currCapture, glCanvas.getWidth(), glCanvas.getHeight());
+						}
+					} catch (GLException e) {
+						e.printStackTrace();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+                	capturing = false;
+                	System.out.print(" done.\n");
+                }
             }
         });
 		
@@ -94,11 +123,20 @@ public class GLWindow extends JFrame {
 		System.exit(0);
 	}
 	
+	public boolean capture(boolean checkDir) {
+		currCapture = Data.getCaptureFile(checkDir);
+		if (currCapture != null) {
+			capturing = true;
+			return true;
+		} else {
+			System.out.println("Cannot save file to capture directory.");
+		}
+		return false;
+	}
+	
 	public static void main(String[] args) {
 		
 		GLWindow s = new GLWindow("Event Display");
-		if (args[0] != null) {
-			String[] dataString = Data.fileRead(args[0]);
-		}
+		if (args.length > 0) Data.fileRead(args[0]);
 	}
 }
