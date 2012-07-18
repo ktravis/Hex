@@ -8,7 +8,7 @@ import com.detector.HexDetector;
 
 
 public class Screen {
-	
+	public static boolean WIREFRAME = false;
 	
 	protected static void setup(GL2 gl2, int width, int height ) {
         gl2.glMatrixMode( GL2.GL_PROJECTION );

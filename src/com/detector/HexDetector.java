@@ -14,11 +14,14 @@ public class HexDetector {
 	private float targetAxisDepth = 0;
 	private float yaw;
 	private float pitch;
-	private float targetYaw, targetPitch = 0;
+	private float targetYaw = 0, targetPitch = 0;
+	private float xOffset = 0, yOffset = 0;
+	private float targetXOffset = 0, targetYOffset = 0;
 	private boolean debug = true;
 	private float zoom = -100;
 	private float targetZoom = zoom;
 
+	public void toggleDebug() { debug = !debug; }
 	public void setActive(int i) { 
 		if (active == i) return;
 		try {
@@ -47,7 +50,26 @@ public class HexDetector {
 			return;
 		}
 	}
-	public void addLayer(Grid g) { layers.add(g); }
+	public void addLayer() { 
+		layers.add(new Grid(layers.get(0)));
+		setActive(layers.size() - 1);
+	}
+	public void addLayer(Grid g) { 
+		layers.add(g); 
+		setActive(layers.size() - 1); 
+	}
+	public void removeLayer() { 
+		if (layers.size() == 1) return;
+		System.out.println(String.format("Layer %d removed.", layers.size() - 1));
+		if (active == layers.size() - 1) active--;
+		layers.remove(layers.size() - 1);
+	}
+	public void removeLayer(int i) { 
+		if (layers.size() == 1 || i < 2) return;
+		if (active == i) active--;
+		layers.remove(i);
+		System.out.println(String.format("Layer %d removed.", i));
+	}
 	public Grid getLayer(int i) { return layers.get(i); } 
 	
 	float[][] v;
@@ -65,7 +87,7 @@ public class HexDetector {
 		}
 		setActive(0);
 		
-		String[] temp = Data.fileRead("res/test.txt");
+		String[] temp = Data.fileRead("res/pixCoords.txt");
 		x = new float[temp.length];
 		y = new float[temp.length];
 		
@@ -88,7 +110,7 @@ public class HexDetector {
 		update();
 		
 		gl2.glPushMatrix();
-		gl2.glTranslatef(0, 0, zoom);
+		gl2.glTranslatef(xOffset, -yOffset, zoom);
 		gl2.glRotatef(yaw, 0, 1, 0);
 		gl2.glRotatef(pitch, 1, 0, 0);
 		
@@ -165,6 +187,12 @@ public class HexDetector {
 				yaw += (targetYaw - yaw) * 0.1f;
 			}
 		}
+		
+		
+		if (Math.abs(targetXOffset - xOffset) > 0.01f || Math.abs(targetYOffset - yOffset) > 0.01f) {
+			xOffset += (targetXOffset - xOffset) * 0.1f;
+			yOffset += (targetYOffset - yOffset) * 0.1f;
+		}
 	}
 	
 	public void updateOrientation(float dx, float dy) {
@@ -183,8 +211,14 @@ public class HexDetector {
 		
 	}
 	
+	public void setAxisPosition(float dx, float dy) {
+		targetXOffset += dx;
+		targetYOffset += dy;
+	}
+	
 	public void resetOrientation() {
 		targetPitch = targetYaw = 0;
+		targetXOffset = targetYOffset = 0;
 	}
 	
 	public float getAxisDepth() { return 40 - active * 40; }

@@ -14,11 +14,9 @@ import com.detector.HexDetector;
 import com.jogamp.opengl.util.FPSAnimator;
 
 import java.awt.BorderLayout;
-import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
-import com.jogamp.newt.event.*;
 import com.jogamp.newt.event.awt.AWTKeyAdapter;
 import com.jogamp.newt.event.awt.AWTMouseAdapter;
 
@@ -30,7 +28,7 @@ public class GLWindow extends JFrame {
 	GLCapabilities glCapabilities;
 	GLCanvas glCanvas;
 	
-	HexDetector h = new HexDetector();
+	HexDetector h;
 	
 	public GLWindow(String title) { 
 		super(title);
@@ -71,15 +69,17 @@ public class GLWindow extends JFrame {
 			}
 		});
 		
+		this.getContentPane().add(glCanvas, BorderLayout.CENTER);
+		this.setSize(DISPLAY_WIDTH, DISPLAY_HEIGHT);
+		this.setVisible(true);
+		
+		h = new HexDetector();
+		
 		MouseHandler inputHandler = new MouseHandler(h);
 		new AWTMouseAdapter(inputHandler).addTo(glCanvas);
 		
 		KeyHandler keyHandler = new KeyHandler(this, h);
 		new AWTKeyAdapter(keyHandler).addTo(glCanvas);
-		
-		this.getContentPane().add(glCanvas, BorderLayout.CENTER);
-		this.setSize(DISPLAY_WIDTH, DISPLAY_HEIGHT);
-		this.setVisible(true);
 		
 		FPSAnimator animator = new FPSAnimator(glCanvas, 60);
 		animator.add(glCanvas);
@@ -93,6 +93,6 @@ public class GLWindow extends JFrame {
 	}
 	
 	public static void main(String[] args) {
-		GLWindow s = new GLWindow("testing");
+		GLWindow s = new GLWindow("Event Display");
 	}
 }

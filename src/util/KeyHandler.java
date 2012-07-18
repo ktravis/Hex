@@ -10,13 +10,6 @@ public class KeyHandler extends KeyAdapter {
 	GLWindow owner;
 	private boolean holding = false;
 	
-	public static final int[] NUMS = {
-		KeyEvent.VK_0, KeyEvent.VK_1, KeyEvent.VK_2,
-		KeyEvent.VK_3, KeyEvent.VK_4, KeyEvent.VK_5,
-		KeyEvent.VK_6, KeyEvent.VK_7, KeyEvent.VK_8,
-		KeyEvent.VK_9
-	};
-	
 	public KeyHandler(GLWindow o, HexDetector h) {
 		this.owner = o;
 		detector = h;
@@ -24,20 +17,39 @@ public class KeyHandler extends KeyAdapter {
 	
 	@Override
 	public void keyPressed(KeyEvent e) {
+		int code = e.getKeyCode();
+		
+		float dx = 0, dy = 0;
+
+		if (code == KeyEvent.VK_I) dy = 2.0f;
+		if (code == KeyEvent.VK_J) dx = -2.0f;
+		if (code == KeyEvent.VK_K) dy = -2.0f;
+		if (code == KeyEvent.VK_L) dx = 2.0f;
+		
 		if (!holding) {
-			int code = e.getKeyCode();
 			
 			if (code == KeyEvent.VK_ESCAPE) owner.destroy();
 			if (code == KeyEvent.VK_R) detector.resetOrientation();
 			if (code == KeyEvent.VK_Q) detector.prevActive();
 			if (code == KeyEvent.VK_W) detector.nextActive();
+			if (code == KeyEvent.VK_S) detector.addLayer();
+			if (code == KeyEvent.VK_A) detector.removeLayer();
+			if (code == KeyEvent.VK_D) detector.toggleDebug();
+			
+			
+			
 			
 			if (code > 47 && code < 59) {
 				detector.setActive(code - 48);
 			}
 			holding = true;
-		}
+		} 
+		
+		if (dx != 0 && dy != 0) detector.setAxisPosition(dx, dy);
+	
 	}
+	
+	
 	
 	@Override
 	public void keyReleased(KeyEvent e) {
