@@ -20,6 +20,13 @@ public class HexDetector {
 	private boolean debug = true;
 	private float zoom = -100;
 	private float targetZoom = zoom;
+	private int[] data = new int[1024];
+	
+	float[][] v;
+	
+	float[] x;
+	float[] y;
+	
 
 	public void toggleDebug() { debug = !debug; }
 	public void setActive(int i) { 
@@ -71,13 +78,7 @@ public class HexDetector {
 		System.out.println(String.format("Layer %d removed.", i));
 	}
 	public Grid getLayer(int i) { return layers.get(i); } 
-	
-	float[][] v;
-	
-	float[] x;
-	float[] y;
-	
-	
+
 	
 	public HexDetector() {
 		layers.add(new Grid());
@@ -224,6 +225,11 @@ public class HexDetector {
 	public float getAxisDepth() { return 40 - active * 40; }
 	
 	public void zoom(float dz) { targetZoom += dz; }
+	
+	public void setData(int[] data) {
+		
+	}
+	
 	
 	public static float[][] getArrays(Grid.tileType type) {
 		if (type == null) return null;

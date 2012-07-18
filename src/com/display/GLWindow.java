@@ -7,6 +7,7 @@ import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.awt.GLCanvas;
 import javax.swing.JFrame;
 
+import util.Data;
 import util.KeyHandler;
 import util.MouseHandler;
 
@@ -27,6 +28,7 @@ public class GLWindow extends JFrame {
 	GLProfile glProfile; 
 	GLCapabilities glCapabilities;
 	GLCanvas glCanvas;
+	String[] dataString;
 	
 	HexDetector h;
 	
@@ -93,6 +95,10 @@ public class GLWindow extends JFrame {
 	}
 	
 	public static void main(String[] args) {
+		
 		GLWindow s = new GLWindow("Event Display");
+		if (args[0] != null) {
+			String[] dataString = Data.fileRead(args[0]);
+		}
 	}
 }
