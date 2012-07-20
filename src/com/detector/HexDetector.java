@@ -1,6 +1,7 @@
 package com.detector;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.ListIterator;
 
 import javax.media.opengl.GL2;
@@ -17,7 +18,7 @@ public class HexDetector {
 	private float targetYaw = 0, targetPitch = 0;
 	private float xOffset = 0, yOffset = 0;
 	private float targetXOffset = 0, targetYOffset = 0;
-	private boolean debug = true;
+	private boolean debug = false;
 	private float zoom = -100;
 	private float targetZoom = zoom;
 	private int[] data = new int[1024];
@@ -81,6 +82,7 @@ public class HexDetector {
 
 	
 	public HexDetector() {
+		Arrays.fill(data, 0);
 		layers.add(new Grid());
 		
 		for (int g = 0; g < 3; g++) {
@@ -146,9 +148,15 @@ public class HexDetector {
 				gl2.glPushMatrix();
 				gl2.glTranslatef(y[index]/850, -x[index]/850, depth);
 				
-				
+				if (layerIndex == 0) {
+					float c = data[index]/255.0f;
+					gl2.glColor4f(c, 0, 1 - c, alpha);
+					if (data[index] == 256) gl2.glColor4f(0, 0.8f, 0, alpha);
+					else if (data[index] == 257) gl2.glColor4f(1, 1, 1, alpha);
+				} else {
+					gl2.glColor4f(1, 1, 1, alpha);
+				}
 				gl2.glBegin(GL2.GL_TRIANGLE_FAN);
-				gl2.glColor4f(1, 1, 1, alpha);
 				float[] verts = v[curr.getType(index).ordinal()];
 				
 				for (int j = 0; j < verts.length; j+=3) {
@@ -226,8 +234,8 @@ public class HexDetector {
 	
 	public void zoom(float dz) { targetZoom += dz; }
 	
-	public void setData(int[] data) {
-		
+	public void setData(int[] d) {
+		data = d;
 	}
 	
 	

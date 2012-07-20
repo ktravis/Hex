@@ -7,6 +7,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 
 public class Data {
@@ -69,6 +70,57 @@ public class Data {
 		} else {
 			return new File(String.format("%sCapture-%d.png", DEFAULT_CAPTURE_PATH, n));
 		}
+	}
+	
+	public static int[] parseData(String path) {
+		int[] data = new int[1024];
+		Arrays.fill(data, 0);
+		String[] lines = fileRead(path);
+		
+		boolean lowSet = false;
+		float low = 0;
+		float high = 0;
+		
+		float[] vals = new float[1024];
+		Arrays.fill(vals, 0.0f);
+		String[] splitLine;
+		
+		for (String s : lines) {
+			splitLine = s.split("[\t]");
+			if (splitLine[2].contains("NG")) {
+				data[Integer.valueOf(splitLine[1]) - 1] = 256;	//256 is out of 0-255 color range, used to flag bad pixel
+			} else {
+				float f = Float.valueOf(splitLine[2].trim());
+				vals[Integer.valueOf(splitLine[1]) - 1] = f;
+				if (f > high) high = f;
+				else if (f < low || !lowSet) {
+					low = f;
+					lowSet = true;
+				}
+			}
+		}
+		System.out.println(low);
+		for (int i = 0; i < 1024; i++) {
+			float f = vals[i];
+			if (f == 0) {
+				if (data[i] == 0) data[i] = 257; //flags data as not reported
+				continue;
+			} 				
+			data[i] = scale(f, low, high);
+		}
+		return data;
+	}
+	
+	public static int scale(float val, float low, float high) {
+//		int h = 0x000;
+//		
+//		int g = (int) (255*(val - low)/(high - low));
+//		
+//		h = g << 16 + 255 - g;
+		
+		int h = (int) (255*(val - low)/(high - low));
+		
+		return h;
 	}
 	
 	

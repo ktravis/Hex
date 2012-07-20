@@ -137,6 +137,6 @@ public class GLWindow extends JFrame {
 	public static void main(String[] args) {
 		
 		GLWindow s = new GLWindow("Event Display");
-		if (args.length > 0) Data.fileRead(args[0]);
+		if (args.length > 0) s.h.setData(Data.parseData(args[0]));
 	}
 }
