@@ -10,6 +10,7 @@ import util.Data;
 
 public class HexDetector {
 	ArrayList<Grid> layers = new ArrayList<Grid>();
+	public static final int INIT_LAYERS = 1;
 	private int active = 0;
 	private float centralAxisDepth;
 	private float targetAxisDepth = 0;
@@ -85,7 +86,7 @@ public class HexDetector {
 		Arrays.fill(data, 0);
 		layers.add(new Grid());
 		
-		for (int g = 0; g < 3; g++) {
+		for (int g = 0; g < INIT_LAYERS; g++) {
 			layers.add(new Grid(layers.get(0)));
 		}
 		setActive(0);
@@ -134,12 +135,17 @@ public class HexDetector {
 			gl2.glEnd();
 		}
 		
-		ListIterator<Grid> gi = layers.listIterator();
 		Grid curr;
-		int layerIndex = 0;
+		int layerIndex = layers.size() - 1;
 		gl2.glRotatef(90, 0, 0, 1);
-		while (gi.hasNext()) {
-			curr = gi.next();
+
+		boolean reverse = false;
+		if (((Math.abs(yaw) > 90 && Math.abs(yaw) < 270) && (pitch < 90 || pitch > 270)) || ((Math.abs(yaw) < 90 || Math.abs(yaw) > 270) && (pitch < 270 && pitch > 90))) reverse = true;;
+		if (reverse) layerIndex = 0;
+
+		while((layerIndex >= 0 && !reverse) || (layerIndex < layers.size() && reverse)) {
+
+			curr = layers.get(layerIndex);
 			float alpha = 0.5f;
 			if (layerIndex == active) alpha = 1.0f;
 			float depth = -(layerIndex - 1) * 40 - centralAxisDepth;
@@ -167,7 +173,8 @@ public class HexDetector {
 				gl2.glPopMatrix();
 			}
 			
-			layerIndex++;
+			if (reverse) layerIndex++;
+			else layerIndex--;
 		}
 		
 		gl2.glPopMatrix();
@@ -212,7 +219,7 @@ public class HexDetector {
 		
 		pitch = pitch > 360 ? 0 : pitch;
 		pitch = (float) (pitch < 0 ? 360 : pitch);
-		yaw = yaw > 360 ? 0 : yaw;
+		yaw = Math.abs(yaw) > 360 ? 0 : yaw;
 		yaw = (float) (pitch < 0 ? 360 : yaw);
 		
 		targetPitch = pitch;

@@ -1,7 +1,6 @@
 package com.display;
 
 import javax.media.opengl.GLAutoDrawable;
-import javax.media.opengl.GLContext;
 import javax.media.opengl.GLEventListener;
 import javax.media.opengl.GLException;
 import javax.media.opengl.GLProfile;
@@ -23,10 +22,6 @@ import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 
-import jogamp.newt.driver.awt.AWTCanvas;
-import jogamp.newt.driver.awt.AWTDisplay;
-import jogamp.newt.driver.awt.AWTEDTUtil;
-import jogamp.opengl.awt.AWTUtil;
 
 import com.jogamp.newt.event.awt.AWTKeyAdapter;
 import com.jogamp.newt.event.awt.AWTMouseAdapter;
@@ -136,7 +131,29 @@ public class GLWindow extends JFrame {
 	
 	public static void main(String[] args) {
 		
-		GLWindow s = new GLWindow("Event Display");
-		if (args.length > 0) s.h.setData(Data.parseData(args[0]));
+		GLWindow s;
+		if (args.length > 0) {
+			if (args[0].startsWith("-")) {
+				if (args[0].contains("-a")) {
+				
+					s = new GLWindow("Event Display");
+					if (args.length > 3) s.h.setData(Data.parseData(args[3], true, Float.valueOf(args[1]), Float.valueOf(args[2])));
+					else s.h.setData(Data.parseData(args[1], true, 0.0f, 1.0f));
+					
+				} else if (args[0].contains("usage")) {
+					System.out.println("java -jar EventDisplay.jar [-a (Scale values against absolute bounds) [low, high]] ['path/datafile.txt']");
+					if (args.length > 1) {
+						s = new GLWindow("Event Display");
+						s.h.setData(Data.parseData(args[1]));
+					}
+				}
+			} else {
+				s = new GLWindow("Event Display");
+				s.h.setData(Data.parseData(args[0]));
+			}
+		} else {
+			s = new GLWindow("Event Display");
+		}
+		
 	}
 }

@@ -73,13 +73,26 @@ public class Data {
 	}
 	
 	public static int[] parseData(String path) {
+		return parseData(path, false, 0, 0);
+	}
+	
+	public static int[] parseData(String path, boolean absolute, float l, float h) {
 		int[] data = new int[1024];
 		Arrays.fill(data, 0);
 		String[] lines = fileRead(path);
 		
-		boolean lowSet = false;
-		float low = 0;
-		float high = 0;
+		float low, high;
+		boolean lowSet;
+		
+		if (!absolute) {
+			lowSet = false;
+			low = 0;
+			high = 0;
+		} else {
+			lowSet = true;
+			low = l;
+			high = h;
+		}
 		
 		float[] vals = new float[1024];
 		Arrays.fill(vals, 0.0f);
@@ -99,7 +112,7 @@ public class Data {
 				}
 			}
 		}
-		System.out.println(low);
+		System.out.println(String.format("Minimum: %f  Maximum: %f", low, high));
 		for (int i = 0; i < 1024; i++) {
 			float f = vals[i];
 			if (f == 0) {
