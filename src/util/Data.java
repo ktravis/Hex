@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Map;
 
+import java.awt.Font;
 
 public class Data {
 	public static final String DEFAULT_CAPTURE_PATH = "out/screenshots/";
@@ -72,12 +74,12 @@ public class Data {
 		}
 	}
 	
-	public static int[] parseData(String path) {
+	public static float[][] parseData(String path) {
 		return parseData(path, false, 0, 0);
 	}
 	
-	public static int[] parseData(String path, boolean absolute, float l, float h) {
-		int[] data = new int[1024];
+	public static float[][] parseData(String path, boolean absolute, float l, float h) {
+		float[] data = new float[1024];
 		Arrays.fill(data, 0);
 		String[] lines = fileRead(path);
 		
@@ -121,21 +123,17 @@ public class Data {
 			} 				
 			data[i] = scale(f, low, high);
 		}
-		return data;
+		return new float[][] {vals, data};
 	}
 	
 	public static int scale(float val, float low, float high) {
-//		int h = 0x000;
-//		
-//		int g = (int) (255*(val - low)/(high - low));
-//		
-//		h = g << 16 + 255 - g;
-		
-		int h = (int) (255*(val - low)/(high - low));
-		
-		return h;
+		return (int) (255*(val - low)/(high - low));
 	}
 	
+	public static Font getFont() {
+		Font f = new Font("Arial", Font.PLAIN, 24);
+		return f;
+	}
 	
 	public static FloatBuffer asFloatBuffer(float... args) {
 		FloatBuffer buffer = FloatBuffer.allocate(args.length * 4);

@@ -17,6 +17,7 @@ public class KeyHandler extends KeyAdapter {
 	GLWindow owner;
 	private boolean holding = false;
 	private boolean canCapture = false;
+	private boolean t = false;
 	
 	public KeyHandler(GLWindow o, HexDetector h) {
 		this.owner = o;
@@ -43,6 +44,9 @@ public class KeyHandler extends KeyAdapter {
 			if (code == KeyEvent.VK_S) detector.addLayer();
 			if (code == KeyEvent.VK_A) detector.removeLayer();
 			if (code == KeyEvent.VK_D) detector.toggleDebug();
+			if (code == KeyEvent.VK_T) {
+				detector.toggleLabels(true);
+			}
 			
 			if (code == KeyEvent.VK_C) canCapture = owner.capture(canCapture);
 			
@@ -62,6 +66,7 @@ public class KeyHandler extends KeyAdapter {
 	@Override
 	public void keyReleased(KeyEvent e) {
 		holding = false;
+		if (e.getKeyCode() == KeyEvent.VK_T) detector.toggleLabels(false);
 	}
 	
 	@Override

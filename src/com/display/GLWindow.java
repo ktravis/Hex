@@ -1,5 +1,6 @@
 package com.display;
 
+import javax.media.opengl.GL2ES2;
 import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLEventListener;
 import javax.media.opengl.GLException;
@@ -22,7 +23,11 @@ import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 
+import jogamp.graph.curve.opengl.TextRendererImpl01;
 
+
+import com.jogamp.graph.curve.opengl.RenderState;
+import com.jogamp.graph.curve.opengl.TextRenderer;
 import com.jogamp.newt.event.awt.AWTKeyAdapter;
 import com.jogamp.newt.event.awt.AWTMouseAdapter;
 
@@ -95,7 +100,7 @@ public class GLWindow extends JFrame {
 			}
 		});
 		
-		this.getContentPane().add(glCanvas, BorderLayout.CENTER);
+		this.getContentPane().add(glCanvas);
 		this.setSize(DISPLAY_WIDTH, DISPLAY_HEIGHT);
 		this.setVisible(true);
 		
@@ -156,4 +161,5 @@ public class GLWindow extends JFrame {
 		}
 		
 	}
+	
 }

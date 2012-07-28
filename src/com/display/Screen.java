@@ -1,17 +1,13 @@
 package com.display;
 
-import java.io.File;
-import java.io.IOException;
-
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
-import javax.media.opengl.GLException;
 import javax.media.opengl.glu.GLU;
 
-import util.Data;
-
 import com.detector.HexDetector;
-import com.jogamp.opengl.util.awt.Screenshot;
+import com.jogamp.graph.curve.opengl.RenderState;
+import com.jogamp.graph.geom.opengl.SVertex;
+import com.jogamp.opengl.util.glsl.ShaderState;
 
 
 public class Screen {
@@ -39,14 +35,17 @@ public class Screen {
         
     }
 	
+	
 	protected static void render(GL2 gl2, int width, int height, HexDetector h) {
         gl2.glClear( GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT );
 
         gl2.glLoadIdentity();
 		
         h.draw(gl2);
-        
+        h.drawHUD(gl2, width, height);
     }
 	
 	
 }
+
+

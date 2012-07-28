@@ -2,13 +2,18 @@ package com.detector;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.ListIterator;
 
 import javax.media.opengl.GL2;
+
+import com.detector.Grid.tileType;
+import com.display.GLWindow;
+import com.jogamp.opengl.util.awt.TextRenderer;
+
 import util.Data;
 
 
 public class HexDetector {
+	private TextRenderer tr;
 	ArrayList<Grid> layers = new ArrayList<Grid>();
 	public static final int INIT_LAYERS = 1;
 	private int active = 0;
@@ -20,8 +25,10 @@ public class HexDetector {
 	private float xOffset = 0, yOffset = 0;
 	private float targetXOffset = 0, targetYOffset = 0;
 	private boolean debug = false;
+	private boolean labels = false;
 	private float zoom = -100;
 	private float targetZoom = zoom;
+	private float[]	trueData = new float[1024];
 	private int[] data = new int[1024];
 	
 	float[][] v;
@@ -29,8 +36,8 @@ public class HexDetector {
 	float[] x;
 	float[] y;
 	
-
 	public void toggleDebug() { debug = !debug; }
+	public void toggleLabels(boolean t) { labels = t; }
 	public void setActive(int i) { 
 		if (active == i) return;
 		try {
@@ -83,6 +90,7 @@ public class HexDetector {
 
 	
 	public HexDetector() {
+		tr = new TextRenderer(Data.getFont(), false, true);
 		Arrays.fill(data, 0);
 		layers.add(new Grid());
 		
@@ -154,6 +162,7 @@ public class HexDetector {
 				gl2.glPushMatrix();
 				gl2.glTranslatef(y[index]/850, -x[index]/850, depth);
 				
+				
 				if (layerIndex == 0) {
 					float c = data[index]/255.0f;
 					gl2.glColor4f(c, 0, 1 - c, alpha);
@@ -169,8 +178,33 @@ public class HexDetector {
 					gl2.glVertex3f(verts[j], verts[j+1], verts[j+2]);
 				}
 				gl2.glEnd();
-				
 				gl2.glPopMatrix();
+			}
+			
+			if (labels  && layerIndex == 0) {
+				tr.begin3DRendering();
+				tr.setSmoothing(false);
+				tr.setColor(1.0f, 1.0f, 1.0f, alpha);
+				
+				gl2.glPushMatrix();
+				gl2.glRotatef(-90.0f, 0.0f, 0.0f, 1.0f);
+				
+				for (int index = 0; index < 1024; index++) {
+					String h = String.valueOf(trueData[index]);
+					float yy = y[index]/850 - 0.33f;
+					float xx = x[index]/850 - 0.30f*h.length();
+					if (curr.getType(index) == tileType.SPLIT_RIGHT) {
+						yy += 0.75f;
+					} else if(curr.getType(index) == tileType.SPLIT_LEFT) {
+						yy -= 0.92f;
+					}
+					
+					if (data[index] != 257) tr.draw3D(h, xx, yy, 0.2f + depth, 0.05f);
+					tr.flush();
+				}
+				gl2.glPopMatrix();
+				
+				tr.end3DRendering();
 			}
 			
 			if (reverse) layerIndex++;
@@ -178,6 +212,18 @@ public class HexDetector {
 		}
 		
 		gl2.glPopMatrix();
+		
+	}
+	
+	public void drawHUD(GL2 gl2, int w, int h) {
+		if (debug) {
+			tr.beginRendering(w, h);
+			tr.setColor(1.0f, 1.0f, 1.0f, 0.75f);
+			tr.flush();
+			tr.draw("layers = "+String.valueOf(layers.size()), 5, 25);
+			tr.draw("active = "+String.valueOf(active), 5, 5);
+			tr.endRendering();
+		}
 	}
 	
 	public void update() {
@@ -241,8 +287,14 @@ public class HexDetector {
 	
 	public void zoom(float dz) { targetZoom += dz; }
 	
-	public void setData(int[] d) {
-		data = d;
+	public void setData(float[][] d) {
+		trueData = d[0];
+		data = new int[d[1].length];
+		Arrays.fill(data, 0);
+		for (int i = 0; i < data.length; i++) {
+			data[i] = (int)d[1][i];
+		}
+		
 	}
 	
 	
