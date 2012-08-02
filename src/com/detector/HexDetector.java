@@ -6,7 +6,6 @@ import java.util.Arrays;
 import javax.media.opengl.GL2;
 
 import com.detector.Grid.tileType;
-import com.display.GLWindow;
 import com.jogamp.opengl.util.awt.TextRenderer;
 
 import util.Data;

@@ -5,9 +5,6 @@ import javax.media.opengl.GL2;
 import javax.media.opengl.glu.GLU;
 
 import com.detector.HexDetector;
-import com.jogamp.graph.curve.opengl.RenderState;
-import com.jogamp.graph.geom.opengl.SVertex;
-import com.jogamp.opengl.util.glsl.ShaderState;
 
 
 public class Screen {
