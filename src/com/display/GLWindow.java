@@ -1,6 +1,5 @@
 package com.display;
 
-import javax.media.opengl.GL2ES2;
 import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLEventListener;
 import javax.media.opengl.GLException;
@@ -17,17 +16,11 @@ import com.detector.HexDetector;
 import com.jogamp.opengl.util.FPSAnimator;
 import com.jogamp.opengl.util.awt.Screenshot;
 
-import java.awt.BorderLayout;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 
-import jogamp.graph.curve.opengl.TextRendererImpl01;
-
-
-import com.jogamp.graph.curve.opengl.RenderState;
-import com.jogamp.graph.curve.opengl.TextRenderer;
 import com.jogamp.newt.event.awt.AWTKeyAdapter;
 import com.jogamp.newt.event.awt.AWTMouseAdapter;
 
@@ -140,16 +133,21 @@ public class GLWindow extends JFrame {
 		if (args.length > 0) {
 			if (args[0].startsWith("-")) {
 				if (args[0].contains("-a")) {
-				
 					s = new GLWindow("Event Display");
 					if (args.length > 3) s.h.setData(Data.parseData(args[3], true, Float.valueOf(args[1]), Float.valueOf(args[2])));
 					else s.h.setData(Data.parseData(args[1], true, 0.0f, 1.0f));
-					
 				} else if (args[0].contains("usage")) {
 					System.out.println("java -jar EventDisplay.jar [-a (Scale values against absolute bounds) [low, high]] ['path/datafile.txt']");
 					if (args.length > 1) {
 						s = new GLWindow("Event Display");
 						s.h.setData(Data.parseData(args[1]));
+					}
+				} else if (args[0].contains("-b")) {
+					if (args.length < 2) {
+						System.out.println("java -jar EventDisplay.jar [-a (Scale values against absolute bounds) [low, high]] ['path/datafile.txt']");
+					} else {
+						s = new GLWindow("Event Display");
+						s.h.setKpixReader(Data.readKpixDataFile(args[1]));
 					}
 				}
 			} else {

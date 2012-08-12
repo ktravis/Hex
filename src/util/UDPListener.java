@@ -87,7 +87,6 @@ public class UDPListener implements Runnable {
 		(new Thread(l)).start();
 		boolean lis = true;
 		while(lis) {
-			System.out.println("1");
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {

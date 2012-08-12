@@ -2,19 +2,27 @@ package com.detector;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.ListIterator;
 
 import javax.media.opengl.GL2;
+
+import util.KpixRecord;
+import util.KpixDataRecord;
+import util.KpixSample;
 
 import com.detector.Grid.tileType;
 import com.jogamp.opengl.util.awt.TextRenderer;
 
 import util.Data;
+import util.KpixFileReader;
 
 
 public class HexDetector {
 	private TextRenderer tr;
 	ArrayList<Grid> layers = new ArrayList<Grid>();
-	public static final int INIT_LAYERS = 1;
+	public static final int BUFFER_SIZE = 16;
+	public static final int INIT_LAYERS = 1; 
 	private int active = 0;
 	private float centralAxisDepth;
 	private float targetAxisDepth = 0;
@@ -23,20 +31,41 @@ public class HexDetector {
 	private float targetYaw = 0, targetPitch = 0;
 	private float xOffset = 0, yOffset = 0;
 	private float targetXOffset = 0, targetYOffset = 0;
-	private boolean debug = false;
-	private boolean labels = false;
+	private boolean debug = true;			//defaults
+	private boolean labels = false;			//--
 	private float zoom = -100;
 	private float targetZoom = zoom;
 	private float[]	trueData = new float[1024];
 	private int[] data = new int[1024];
+	
+	private KpixFileReader kpixReader;
+	private int readerIndex = 0;
+	private int timeStamp = 0;
+	private boolean playing = false;
+	private int playSpeed = 1;
+	private int playOffset = 1;
+	private List<Pair<float[], int[]>> dataBuf;
+	private List<Integer> indexBuf;
+	private int marker = 0;
+	public class Pair<X, Y> { 
+		  public final X x; 
+		  public final Y y; 
+		  public Pair(X x, Y y) { 
+		    this.x = x; 
+		    this.y = y; 
+		  } 
+		} 
+	
 	
 	float[][] v;
 	
 	float[] x;
 	float[] y;
 	
+	public void togglePlaying() { playing = !playing; }
+	public void setPlayspeed(int s) { playSpeed = s; } 
 	public void toggleDebug() { debug = !debug; }
-	public void toggleLabels(boolean t) { labels = t; }
+	public void toggleLabels() { labels = !labels; }
 	public void setActive(int i) { 
 		if (active == i) return;
 		try {
@@ -93,18 +122,28 @@ public class HexDetector {
 		Arrays.fill(data, 0);
 		layers.add(new Grid());
 		
-		for (int g = 0; g < INIT_LAYERS; g++) {
+		for (int g = 1; g < INIT_LAYERS; g++) {
 			layers.add(new Grid(layers.get(0)));
 		}
 		setActive(0);
 		
-		String[] temp = Data.fileRead("res/pixCoords.txt");
-		x = new float[temp.length];
-		y = new float[temp.length];
+//		OLD METHOD, BAD INDICES
+//		String[] temp = Data.fileRead("res/pixCoords.txt");
+//		x = new float[temp.length];
+//		y = new float[temp.length];
+//		
+//		for (int i = 0; i < temp.length; i++) {
+//			x[i] = Float.valueOf(temp[i].split(" ")[0]);
+//			y[i] = Float.valueOf(temp[i].split(" ")[1]);
+//		}
 		
-		for (int i = 0; i < temp.length; i++) {
-			x[i] = Float.valueOf(temp[i].split(" ")[0]);
-			y[i] = Float.valueOf(temp[i].split(" ")[1]);
+		String[] temp = Data.fileRead("res/final.txt");
+		x = new float[Grid.MAX_TILES];
+		y = new float[Grid.MAX_TILES];
+		
+		for (int i = 0; i < x.length; i++) {
+			x[i] = Float.valueOf(temp[i].split(" ")[1]);
+			y[i] = Float.valueOf(temp[i].split(" ")[2]);
 		}
 		
 		v = new float[Grid.tileType.values().length][];
@@ -221,6 +260,11 @@ public class HexDetector {
 			tr.flush();
 			tr.draw("layers = "+String.valueOf(layers.size()), 5, 25);
 			tr.draw("active = "+String.valueOf(active), 5, 5);
+			if (kpixReader != null) {
+				tr.draw("reader index = "+String.valueOf(readerIndex), 5, 45);
+				tr.draw("data timestamp = "+String.valueOf(timeStamp), 5, 65);
+				if (playing) tr.draw("playback speed = "+ String.valueOf(1.0f/playSpeed), 5, 85);
+			}
 			tr.endRendering();
 		}
 	}
@@ -253,6 +297,14 @@ public class HexDetector {
 		if (Math.abs(targetXOffset - xOffset) > 0.01f || Math.abs(targetYOffset - yOffset) > 0.01f) {
 			xOffset += (targetXOffset - xOffset) * 0.1f;
 			yOffset += (targetYOffset - yOffset) * 0.1f;
+		}
+		
+		//
+		if (playing && kpixReader.hasNextRecord()) {
+			if (playOffset >= playSpeed) {
+				stepData();
+				playOffset = 1;
+			} else playOffset++;
 		}
 	}
 	
@@ -296,6 +348,82 @@ public class HexDetector {
 		
 	}
 	
+	public void setKpixReader(KpixFileReader r) { 
+		if (r == null) return;
+		kpixReader = r;
+		readerIndex = 0;
+		timeStamp = 0;
+		dataBuf = new ArrayList<Pair<float[], int[]>>();
+		indexBuf = new ArrayList<Integer>();
+		stepData();
+	}
+	
+	public void stepData() { 
+		if (marker > 0) {
+			
+			Pair<float[], int[]> d = dataBuf.get(dataBuf.size() - marker);
+			trueData = d.x;
+			data = d.y;
+			readerIndex = indexBuf.get(dataBuf.size() - marker);
+			marker--;
+//			System.out.println("buffer step");
+			return;
+		}
+		dataBuf.add(new Pair<float[], int[]>(trueData, data));
+		indexBuf.add(readerIndex);
+		
+		try {
+			KpixRecord record = kpixReader.readRecord();
+			readerIndex++;
+			
+	        while (kpixReader.hasNextRecord()) {
+	        	if (record.getRecordType() == KpixRecord.KpixRecordType.DATA && record.getRecordLength() > 1000) break;
+	        	record = kpixReader.readRecord();
+	        	readerIndex++;
+	        }
+	        timeStamp = ((KpixDataRecord)record).getTimestamp();
+	        List<KpixSample> temp = ((KpixDataRecord)record).getSamples();
+	        trueData = new float[1024];
+	        ListIterator<KpixSample> li = temp.listIterator();
+	        KpixSample s = li.next();
+	        
+	        while (li.hasNext()) {
+	        	s = li.next();
+	        	if (s.getType() != KpixSample.KpixSampleType.KPIX) break;
+	        	trueData[s.getChannel()] = s.getAdc();
+	        }
+        	data = Data.parseData(trueData);
+		} catch (Exception e) {
+			System.out.println("Failed to step data forward.");
+			return;
+		}
+		if (!playing) System.out.println("Data stepped forward.");
+		if (dataBuf.size() > BUFFER_SIZE) {
+			dataBuf.remove(0);
+			indexBuf.remove(0);
+		}
+		
+	}
+	
+	public void stepDataBack() { 
+		if (dataBuf == null || dataBuf.size() < 1) return;
+		System.out.println("test");
+		marker++;
+		Pair<float[], int[]> d = dataBuf.get(dataBuf.size() - 1 - marker);
+		trueData = d.x;
+		data = d.y;
+		readerIndex = indexBuf.get(indexBuf.size() - 1 - marker);
+		
+	}
+	
+	public void resetData() { 
+		kpixReader.rewind();
+		readerIndex = 0;
+		marker = 0;
+		dataBuf.clear();
+		indexBuf.clear();
+		System.out.println("Data record rewound.");
+	}
 	
 	public static float[][] getArrays(Grid.tileType type) {
 		if (type == null) return null;

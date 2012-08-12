@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Map;
 
 import java.awt.Font;
 
@@ -39,16 +38,29 @@ public class Data {
 			reader.close();
 			
 		} catch (FileNotFoundException e) {
-			System.out.println("Could not read file, file not found.");
+			System.out.printf("Could not read file '%s', file not found.\n", path);
 			e.printStackTrace();
 		} catch (IOException e) {
-			System.out.println("Could not read file, IOException encountered.");
+			System.out.printf("Could not read file '%s', IOException encountered.\n", path);
 			e.printStackTrace();
 		}
 
 		System.out.print(" done.\n");
 		
 		return lines;
+	}
+	
+	public static KpixFileReader readKpixDataFile(String path) {
+		try {
+			System.out.printf("Reading Binary Datafile '%s'...\n", path);
+			return new KpixFileReader(new File(path));
+		} catch (FileNotFoundException e) {
+			System.out.printf("File '%s' not found.", path);
+		} catch (IOException e) {
+			System.out.printf("Error reading file '%s'.", path);
+			e.printStackTrace();
+		}
+		return null;
 	}
 	
 	public static File getCaptureFile(boolean checkDir) {
@@ -126,8 +138,47 @@ public class Data {
 		return new float[][] {vals, data};
 	}
 	
+	public static int[] parseData(int[] in) {
+		if (in == null) return new int[1024]; 
+		int[] d = new int[1024];
+		float min = in[0], max = in[0];
+		
+		for (int f : in) {
+			if (f < min) min = f;
+			else if (f > max) max = f;
+		}
+		
+		for (int i = 0; i < 1024 && i < in.length; i++) {
+			d[i] = scale(in[i], min, max);
+		}
+		return d;
+	}
+	public static int[] parseData(float[] in) {
+		if (in == null) return new int[1024]; 
+		int[] d = new int[1024];
+		float min = in[0], max = in[0];
+		
+		float avg = 0;
+		
+		for (float f : in) {
+			if (f < min) min = f;
+			else if (f > max) max = f;
+			avg += f;
+		}
+		
+		avg /= 1024;
+		
+		for (int i = 0; i < 1024 && i < in.length; i++) {
+			d[i] = scale(in[i], min, max);
+		}
+		return d;
+	}
+	
 	public static int scale(float val, float low, float high) {
 		return (int) (255*(val - low)/(high - low));
+	}
+	public static int scaleAVG(float val, float high, float avg) {
+		return (int) (255*Math.log10(Math.abs(val))/Math.log10(high));
 	}
 	
 	public static Font getFont() {

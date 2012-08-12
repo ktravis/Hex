@@ -1,5 +1,7 @@
 package com.detector;
 
+import util.Data;
+
 
 public class Grid {
 	public static float TILE_WIDTH = 5;
@@ -28,7 +30,12 @@ public class Grid {
 	
 	public Grid() {
 		types = new tileType[MAX_TILES];
-		fill();
+		//fill();
+		String[] ls = Data.fileRead("res/final.txt");
+		types = new tileType[MAX_TILES];
+		for (int i=0; i < MAX_TILES; i++) {
+			types[i] = tileType.values()[Integer.valueOf(ls[i].split(" ")[0])];
+		}
 	}
 	
 	public Grid(Grid template) {
@@ -36,6 +43,7 @@ public class Grid {
 		types = template.typeList();
 	}
 	
+	/*
 	void fill() {
 		if (types == null) return;
 		System.out.print("Filling...");
@@ -142,31 +150,7 @@ public class Grid {
 		System.out.print(" done.\n");
 		
 	}
-	
-	//WRONG, fix
-	int[] getNeighbors(int i) {
-		int[] n = new int[6];
-		
-		
-		if (i/MAX_ROW_SIZE % 2 != 0) {
-			n[0] = i - MAX_ROW_SIZE < 0 ? null : i - MAX_ROW_SIZE;
-			n[1] = i - MAX_ROW_SIZE + 1 < 0 ? null : i - MAX_ROW_SIZE + 1;
-			n[2] = i - 1 < 0 ? null : i - 1;
-			n[3] = i + 1 > MAX_TILES - 1 ? null : i + 1;
-			n[4] = i + MAX_ROW_SIZE > MAX_TILES - 1 ? null : i + MAX_ROW_SIZE;
-			n[5] = i + MAX_ROW_SIZE + 1 > MAX_TILES - 1 ? null : i + MAX_ROW_SIZE + 1;
-		} else {
-			n[0] = i - MAX_ROW_SIZE - 1 < 0 ? null : i - MAX_ROW_SIZE - 1;
-			n[1] = i - MAX_ROW_SIZE < 0 ? null : i - MAX_ROW_SIZE;
-			n[2] = i - 1 < 0 ? null : i - 1;
-			n[3] = i + 1 > MAX_TILES - 1 ? null : i + 1;
-			n[4] = i + MAX_ROW_SIZE - 1 > MAX_TILES - 1 ? null : i + MAX_ROW_SIZE - 1;
-			n[5] = i + MAX_ROW_SIZE > MAX_TILES - 1 ? null : i + MAX_ROW_SIZE;
-		}
-		
-		
-		return n;
-	}
+	*/
 	
 	public tileType getType(int i) {
 		return types[i];
