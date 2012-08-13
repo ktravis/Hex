@@ -31,7 +31,7 @@ public class Grid {
 	public Grid() {
 		types = new tileType[MAX_TILES];
 		//fill();
-		String[] ls = Data.fileRead("res/final.txt");
+		String[] ls = Data.fileRead("res/final.txt"); //redundant w/ HexDetector()
 		types = new tileType[MAX_TILES];
 		for (int i=0; i < MAX_TILES; i++) {
 			types[i] = tileType.values()[Integer.valueOf(ls[i].split(" ")[0])];
@@ -43,7 +43,12 @@ public class Grid {
 		types = template.typeList();
 	}
 	
-	/*
+	public Grid(tileType[] templateTypes) {
+		types = new tileType[MAX_TILES];
+		types = templateTypes;
+	}
+	
+	/* OLD, SLOW, MOVED TO GRIDSETUP
 	void fill() {
 		if (types == null) return;
 		System.out.print("Filling...");

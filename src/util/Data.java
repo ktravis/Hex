@@ -173,12 +173,27 @@ public class Data {
 		}
 		return d;
 	}
-	
 	public static int scale(float val, float low, float high) {
 		return (int) (255*(val - low)/(high - low));
 	}
-	public static int scaleAVG(float val, float high, float avg) {
-		return (int) (255*Math.log10(Math.abs(val))/Math.log10(high));
+	public static float[] setScaling(float[] in) {
+		float sum = 0, high = 0;
+		for (float f : in) {
+			if (f > high) high = f;
+			sum += f;
+		}
+		int n = in.length;
+		float mean = sum/n;
+		
+		return new float[] { high,  mean};  
+	}
+	public static float getMean(float[] in) {
+		float sum = 0;
+		for (float f : in) {
+			sum += f;
+		}
+		int n = in.length;
+		return sum/n;
 	}
 	
 	public static Font getFont() {

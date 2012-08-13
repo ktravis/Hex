@@ -37,6 +37,7 @@ public class HexDetector {
 	private float targetZoom = zoom;
 	private float[]	trueData = new float[1024];
 	private int[] data = new int[1024];
+	private float mean = 0;
 	
 	private KpixFileReader kpixReader;
 	private int readerIndex = 0;
@@ -56,9 +57,7 @@ public class HexDetector {
 		  } 
 		} 
 	
-	
 	float[][] v;
-	
 	float[] x;
 	float[] y;
 	
@@ -115,42 +114,42 @@ public class HexDetector {
 		System.out.println(String.format("Layer %d removed.", i));
 	}
 	public Grid getLayer(int i) { return layers.get(i); } 
-
+	public void setScale(float[] d) { 
+		mean = Data.getMean(d);
+	}
+	public float scale(float in) {
+		return (float)(Math.log(Math.log(6*in/mean)));
+	}
 	
 	public HexDetector() {
 		tr = new TextRenderer(Data.getFont(), false, true);
 		Arrays.fill(data, 0);
-		layers.add(new Grid());
+		
+		String[] temp = Data.fileRead("res/final.txt");
+		x = new float[Grid.MAX_TILES];
+		y = new float[Grid.MAX_TILES];
+		Grid.tileType[] template = new Grid.tileType[Grid.MAX_TILES];
+		tileType[] ref = Grid.tileType.values();
+		
+		for (int i = 0; i < x.length; i++) {
+			String[] s = temp[i].split(" ");
+			template[i] = ref[Integer.valueOf(s[0])];
+			x[i] = Float.valueOf(s[1]);
+			y[i] = Float.valueOf(s[2]);
+		}
+		
+		v = new float[ref.length][];
+		
+		for (Grid.tileType t : ref) {
+			v[t.ordinal()] = getArrays(t)[0];
+		}
+		
+		layers.add(new Grid(template));
 		
 		for (int g = 1; g < INIT_LAYERS; g++) {
 			layers.add(new Grid(layers.get(0)));
 		}
 		setActive(0);
-		
-//		OLD METHOD, BAD INDICES
-//		String[] temp = Data.fileRead("res/pixCoords.txt");
-//		x = new float[temp.length];
-//		y = new float[temp.length];
-//		
-//		for (int i = 0; i < temp.length; i++) {
-//			x[i] = Float.valueOf(temp[i].split(" ")[0]);
-//			y[i] = Float.valueOf(temp[i].split(" ")[1]);
-//		}
-		
-		String[] temp = Data.fileRead("res/final.txt");
-		x = new float[Grid.MAX_TILES];
-		y = new float[Grid.MAX_TILES];
-		
-		for (int i = 0; i < x.length; i++) {
-			x[i] = Float.valueOf(temp[i].split(" ")[1]);
-			y[i] = Float.valueOf(temp[i].split(" ")[2]);
-		}
-		
-		v = new float[Grid.tileType.values().length][];
-		
-		for (Grid.tileType t : Grid.tileType.values()) {
-			v[t.ordinal()] = getArrays(t)[0];
-		}
 		
 		pitch = yaw = 0;
 		update();
@@ -165,6 +164,7 @@ public class HexDetector {
 		gl2.glRotatef(pitch, 1, 0, 0);
 		
 		//Detector orientation lines - colored R,G,B to denote local X,Y,Z
+		/*
 		if (debug) {
 			gl2.glBegin(GL2.GL_LINES);
 			gl2.glColor4f(0.8f, 0.0f, 0.0f, 0.5f);
@@ -180,6 +180,7 @@ public class HexDetector {
 			gl2.glVertex3f(0.0f, 0.0f, 100.0f);
 			gl2.glEnd();
 		}
+		*/
 		
 		Grid curr;
 		int layerIndex = layers.size() - 1;
@@ -200,9 +201,9 @@ public class HexDetector {
 				gl2.glPushMatrix();
 				gl2.glTranslatef(y[index]/850, -x[index]/850, depth);
 				
-				
 				if (layerIndex == 0) {
-					float c = data[index]/255.0f;
+					//float c = data[index];
+					float c = scale(trueData[index]);
 					gl2.glColor4f(c, 0, 1 - c, alpha);
 					if (data[index] == 256) gl2.glColor4f(0, 0.8f, 0, alpha);
 					else if (data[index] == 257) gl2.glColor4f(1, 1, 1, alpha);
@@ -265,7 +266,9 @@ public class HexDetector {
 				tr.draw("data timestamp = "+String.valueOf(timeStamp), 5, 65);
 				if (playing) tr.draw("playback speed = "+ String.valueOf(1.0f/playSpeed), 5, 85);
 			}
+//			tr.draw("marker/buffersize = "+String.valueOf(marker + 1) + "/" + String.valueOf(dataBuf.size()), 5, 85);
 			tr.endRendering();
+			
 		}
 	}
 	
@@ -359,18 +362,14 @@ public class HexDetector {
 	}
 	
 	public void stepData() { 
-		if (marker > 0) {
-			
-			Pair<float[], int[]> d = dataBuf.get(dataBuf.size() - marker);
+		if (marker < dataBuf.size() - 1) {
+			marker++;
+			Pair<float[], int[]> d = dataBuf.get(marker);
 			trueData = d.x;
 			data = d.y;
-			readerIndex = indexBuf.get(dataBuf.size() - marker);
-			marker--;
-//			System.out.println("buffer step");
+			readerIndex = indexBuf.get(marker);
 			return;
 		}
-		dataBuf.add(new Pair<float[], int[]>(trueData, data));
-		indexBuf.add(readerIndex);
 		
 		try {
 			KpixRecord record = kpixReader.readRecord();
@@ -392,28 +391,32 @@ public class HexDetector {
 	        	if (s.getType() != KpixSample.KpixSampleType.KPIX) break;
 	        	trueData[s.getChannel()] = s.getAdc();
 	        }
-        	data = Data.parseData(trueData);
+	        if (mean == 0) setScale(trueData);
+
 		} catch (Exception e) {
 			System.out.println("Failed to step data forward.");
 			return;
 		}
 		if (!playing) System.out.println("Data stepped forward.");
+		
+		dataBuf.add(new Pair<float[], int[]>(trueData, data));
+		indexBuf.add(readerIndex);
+		marker = dataBuf.size() - 1;
 		if (dataBuf.size() > BUFFER_SIZE) {
 			dataBuf.remove(0);
 			indexBuf.remove(0);
+			marker = BUFFER_SIZE - 1;
 		}
 		
 	}
 	
 	public void stepDataBack() { 
-		if (dataBuf == null || dataBuf.size() < 1) return;
-		System.out.println("test");
-		marker++;
-		Pair<float[], int[]> d = dataBuf.get(dataBuf.size() - 1 - marker);
+		if (dataBuf == null || dataBuf.size() < 1 || marker == 0) return;
+		marker--;
+		Pair<float[], int[]> d = dataBuf.get(marker);
 		trueData = d.x;
 		data = d.y;
-		readerIndex = indexBuf.get(indexBuf.size() - 1 - marker);
-		
+		readerIndex = indexBuf.get(marker);
 	}
 	
 	public void resetData() { 

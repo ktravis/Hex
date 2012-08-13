@@ -1,23 +1,16 @@
 package util;
 
-import java.io.File;
-import java.io.IOException;
-
-import javax.media.opengl.GLException;
-
 import com.detector.HexDetector;
 import com.display.GLWindow;
-import com.display.Screen;
 import com.jogamp.newt.event.KeyAdapter;
 import com.jogamp.newt.event.KeyEvent;
-import com.jogamp.opengl.util.awt.Screenshot;
+
 
 public class KeyHandler extends KeyAdapter {
 	HexDetector detector;
 	GLWindow owner;
 	private boolean holding = false;
 	private boolean canCapture = false;
-	private boolean t = false;
 	private int playSpeed = 1;
 	
 	public KeyHandler(GLWindow o, HexDetector h) {
