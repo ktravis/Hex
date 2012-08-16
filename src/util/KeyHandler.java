@@ -46,6 +46,7 @@ public class KeyHandler extends KeyAdapter {
 			if (code == KeyEvent.VK_CLOSE_BRACKET && playSpeed < 8) detector.setPlayspeed(++playSpeed);
 			if (code == KeyEvent.VK_I) detector.resetData();
 			if (code == KeyEvent.VK_U) detector.stepDataBack();
+			if (code == KeyEvent.VK_L) detector.cycleLabelMode();
 			
 			if (code > 47 && code < 59) {
 				detector.setActive(code - 48);

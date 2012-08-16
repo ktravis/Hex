@@ -196,8 +196,8 @@ public class Data {
 		return sum/n;
 	}
 	
-	public static Font getFont() {
-		Font f = new Font("Arial", Font.PLAIN, 24);
+	public static Font getFont(int... size) {
+		Font f = new Font("Arial", Font.BOLD, size.length > 0 ? size[0] : 24);
 		return f;
 	}
 	

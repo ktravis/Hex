@@ -19,13 +19,21 @@ public class KpixFileReader implements Closeable {
 
     private final FileChannel channel;
     private final MappedByteBuffer mapFile;
-
+    //
+    private final String fileName;
+    //
+    
     public KpixFileReader(File file) throws FileNotFoundException, IOException {
         channel = new RandomAccessFile(file, "r").getChannel();
         mapFile = channel.map(FileChannel.MapMode.READ_ONLY, 0, file.length());
         mapFile.order(ByteOrder.LITTLE_ENDIAN);
+        //
+        fileName = file.getName();
+        //
     }
-
+    //
+    public String getName() { return fileName; }
+    //
     public KpixRecord readRecord() throws IOException {
         if (!mapFile.hasRemaining()) return null;
         int marker = mapFile.getInt();
