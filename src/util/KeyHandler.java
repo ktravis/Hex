@@ -11,7 +11,6 @@ public class KeyHandler extends KeyAdapter {
 	GLWindow owner;
 	private boolean holding = false;
 	private boolean canCapture = false;
-	private int playSpeed = 1;
 	
 	public KeyHandler(GLWindow o, HexDetector h) {
 		this.owner = o;
@@ -37,16 +36,14 @@ public class KeyHandler extends KeyAdapter {
 			if (code == KeyEvent.VK_W) detector.nextActive();
 			if (code == KeyEvent.VK_S) detector.addLayer();
 			if (code == KeyEvent.VK_A) detector.removeLayer();
-			if (code == KeyEvent.VK_D) detector.toggleDebug();
 			if (code == KeyEvent.VK_Y) detector.stepData();
 			if (code == KeyEvent.VK_T) detector.toggleLabels();
 			if (code == KeyEvent.VK_P) detector.togglePlaying();
 			if (code == KeyEvent.VK_C) canCapture = owner.capture(canCapture);
-			if (code == KeyEvent.VK_OPEN_BRACKET && playSpeed > 1) detector.setPlayspeed(--playSpeed);
-			if (code == KeyEvent.VK_CLOSE_BRACKET && playSpeed < 8) detector.setPlayspeed(++playSpeed);
 			if (code == KeyEvent.VK_I) detector.resetData();
 			if (code == KeyEvent.VK_U) detector.stepDataBack();
 			if (code == KeyEvent.VK_L) detector.cycleLabelMode();
+			if (code == KeyEvent.VK_K) detector.cycleDispMode();
 			
 			if (code > 47 && code < 59) {
 				detector.setActive(code - 48);

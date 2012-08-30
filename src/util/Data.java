@@ -77,7 +77,15 @@ public class Data {
 				}
 			}
 		}
-		int n = captureDir.list().length;
+		String[] l = captureDir.list();
+		int n = l.length;
+		String s = "";
+		for (String f : l) {
+			s += f;
+		}
+		while (s.contains(String.format("Capture-%d.", n))) {
+			n++;
+		}
 		
 		if (!NO_TGA) {
 			return new File(String.format("%sCapture-%d.tga", DEFAULT_CAPTURE_PATH, n));

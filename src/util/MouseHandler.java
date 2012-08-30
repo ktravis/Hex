@@ -1,6 +1,8 @@
 package util;
 
 
+import javax.swing.JTable;
+
 import com.detector.HexDetector;
 import com.jogamp.newt.event.MouseAdapter;
 import com.jogamp.newt.event.MouseEvent;
@@ -73,12 +75,18 @@ public class MouseHandler extends MouseAdapter {
 		
 	}
 	
+	@Override 
+	public void mouseMoved(MouseEvent e) {
+		int mx = e.getX();
+		int my = e.getY();
+		if (mx < detector.getMBoxX() + detector.getMBoxW() && mx > detector.getMBoxX() && my > detector.getMBoxY()) detector.showMessages(true);
+		else detector.showMessages(false);
+	}
+	
 	@Override
 	public void mouseWheelMoved(MouseEvent e) {
 		float dr = e.getWheelRotation();
-		
 		detector.zoom(dr * 10);
 	}
-	
 	
 }

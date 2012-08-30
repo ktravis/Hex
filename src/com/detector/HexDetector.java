@@ -1,5 +1,8 @@
 package com.detector;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -31,9 +34,18 @@ public class HexDetector {
 	private float targetYaw = 0, targetPitch = 0;
 	private float xOffset = 0, yOffset = 0;
 	private float targetXOffset = 0, targetYOffset = 0;
-	private boolean debug = true;			//defaults
-	private boolean labels = false;			//--
+	private boolean labels = false;			
 	private boolean calibrated = false;
+	private boolean showMessages = true;
+	private boolean newMessage = true;
+	private float mBoxAlpha = 1.0f;
+	private int mCounter = 50;
+	private ArrayList<String> messages;
+	private int mBoxY = 0;
+	private int mBoxX = 0;
+	private int mBoxW = 300;
+	private int mBoxH = 25;
+	private int dispMode = 0; //0 : Log scale, 1 : Calibrated scale
 	private int labelMode = 0;
 	private float zoom = -100;
 	private float targetZoom = zoom;
@@ -42,14 +54,17 @@ public class HexDetector {
 	private float mean = 0;
 	private float[] means = new float[1024];
 	private float[] variances = new float[1024];
+	private float[] calibMins = new float[1024];
 	private float SCALE_FACTOR = 0.5f;
+	private int highlighted = -1;
 	
 	private KpixFileReader kpixReader;
 	private String fileName;
+	private String calibFileName = "none";
 	private int readerIndex = 0;
 	private int timeStamp = 0;
 	private boolean playing = false;
-	private int playSpeed = 1;
+	private float playSpeed = 1;
 	private int playOffset = 1;
 	private List<Pair<float[], int[]>> dataBuf;
 	private List<Integer> indexBuf;
@@ -67,17 +82,21 @@ public class HexDetector {
 	float[] x;
 	float[] y;
 	
+	public float[] getData() { return trueData; }
 	public void togglePlaying() { playing = !playing; }
-	public void setPlayspeed(int s) { playSpeed = s; } 
-	public void toggleDebug() { debug = !debug; }
+	public void setPlayspeed(float s) { playSpeed = s; if (s < 1 && playing) togglePlaying(); } 
 	public void toggleLabels() { labels = !labels; }
+	public void setLabelMode(int i) { labelMode = i; }
 	public void cycleLabelMode() { labelMode++; if (labelMode > 2) labelMode = 0; }
+	public void setDispMode(int i) { dispMode = i; }
+	public void cycleDispMode() { if (calibrated) dispMode = dispMode < 1 ? 1 : 0; else calibrateData();} 
 	public void setActive(int i) { 
 		if (active == i) return;
 		try {
 			if (layers.get(i) != null) active = i; 
 			update();
 			System.out.println(String.format("Layer %d now active.", active));
+			sendMessage(String.format("Layer %d now active.", active));
 		} catch (IndexOutOfBoundsException e) { 
 			return;
 		}
@@ -87,6 +106,7 @@ public class HexDetector {
 			if (layers.get(active + 1) != null) active += 1; 
 			update();
 			System.out.println(String.format("Layer %d now active.", active));
+			sendMessage(String.format("Layer %d now active.", active));
 		} catch (IndexOutOfBoundsException e) { 
 			return;
 		}
@@ -96,6 +116,7 @@ public class HexDetector {
 			if (layers.get(active - 1) != null) active -= 1; 
 			update();
 			System.out.println(String.format("Layer %d now active.", active));
+			sendMessage(String.format("Layer %d now active.", active));
 		} catch (IndexOutOfBoundsException e) { 
 			return;
 		}
@@ -111,6 +132,7 @@ public class HexDetector {
 	public void removeLayer() { 
 		if (layers.size() == 1) return;
 		System.out.println(String.format("Layer %d removed.", layers.size() - 1));
+		sendMessage(String.format("Layer %d removed.", layers.size() - 1));
 		if (active == layers.size() - 1) active--;
 		layers.remove(layers.size() - 1);
 	}
@@ -119,20 +141,38 @@ public class HexDetector {
 		if (active == i) active--;
 		layers.remove(i);
 		System.out.println(String.format("Layer %d removed.", i));
+		sendMessage(String.format("Layer %d removed.", i));
 	}
 	public Grid getLayer(int i) { return layers.get(i); } 
+	public void setScale(float s) {
+		try {
+			SCALE_FACTOR = s;
+		} catch (Exception e){}
+	}
 	public void setScale(float[] d) { 
 		mean = Data.getMean(d);
 	}
 	public float scale(float in) {
 		return (float)(Math.log(Math.log(6*in/mean)));
 	}
+	public boolean isCalibrated() { return calibrated; }
+	public boolean isPlaying() { return playing; }
+	public boolean labels() { return labels; }
+	
+	public void showMessages(boolean s) { showMessages = s; }
+	public int getMBoxX() { return mBoxX; }
+	public int getMBoxY() { return mBoxY; }
+	public int getMBoxW() { return mBoxW; }
+	public int getMBoxH() { return mBoxH; }
 	
 	public HexDetector() {
 		ltr = new TextRenderer(Data.getFont(), false, true);
 		gtr = new TextRenderer(Data.getFont(14), false, true);
 		
 		Arrays.fill(data, 0);
+		
+		messages = new ArrayList<String>();
+		sendMessage("Running.");
 		
 		String[] temp = Data.fileRead("res/final.txt");
 		x = new float[Grid.MAX_TILES];
@@ -191,9 +231,20 @@ public class HexDetector {
 				gl2.glPushMatrix();
 				gl2.glTranslatef(y[index]/850, -x[index]/850, depth);
 				
+				float[] verts = v[curr.getType(index).ordinal()];
+				
+				if (index == highlighted) {
+					gl2.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+					gl2.glBegin(GL2.GL_TRIANGLE_FAN);
+					for (int j = 0; j < verts.length; j+=3) {
+						gl2.glVertex3f(verts[j] * 1.15f, verts[j+1] * 1.15f, verts[j+2] - .05f);
+					}
+					gl2.glEnd();
+				}
+				
 				if (layerIndex == 0) {
-					if (calibrated) {
-						float c = (float) (SCALE_FACTOR*(trueData[index] - means[index])/variances[index]);
+					if (calibrated && dispMode == 1) {
+						float c = (float) (SCALE_FACTOR*(trueData[index] - means[index] - calibMins[index])/variances[index]);
 						gl2.glColor4f(c, 0, 1 - c, alpha);
 					} else {
 						float c = trueData[index];
@@ -203,17 +254,18 @@ public class HexDetector {
 							gl2.glColor4f(c, 0, 1 - c, alpha);
 						}
 					}
+					if (trueData[index] == 0) gl2.glColor4f(0.0f, 1.0f, 0.0f, alpha);
 					
 				} else {
 					gl2.glColor4f(1, 1, 1, alpha);
 				}
 				gl2.glBegin(GL2.GL_TRIANGLE_FAN);
-				float[] verts = v[curr.getType(index).ordinal()];
 				
 				for (int j = 0; j < verts.length; j+=3) {
 					gl2.glVertex3f(verts[j], verts[j+1], verts[j+2]);
 				}
 				gl2.glEnd();
+				
 				gl2.glPopMatrix();
 			}
 			
@@ -227,10 +279,13 @@ public class HexDetector {
 				
 				for (int index = 0; index < 1024; index++) {
 					String h = "";
+					if (!calibrated) labelMode = (labelMode == 1) || (labelMode == 3) ? labelMode : 1;
 					switch (labelMode) {
-					case 0: h = String.valueOf((int)(trueData[index] - means[index])); break;
+					case 0: h = String.valueOf((int)(trueData[index] - means[index] - calibMins[index])); break;
 					case 1: h = String.valueOf((int)(trueData[index])); break;
-					case 2: h = String.valueOf((int)(100*(trueData[index] - means[index])/variances[index])); break;
+					case 2: h = String.valueOf((int)(100*(trueData[index] - means[index] - calibMins[index])/variances[index])); break;
+					case 3: h = String.valueOf(index); break;
+					case 4: h = String.valueOf((int)(trueData[index] - calibMins[index])); break;
 					
 					}
 					float yy = y[index]/850 - 0.33f;
@@ -258,31 +313,78 @@ public class HexDetector {
 	}
 	
 	public void drawHUD(GL2 gl2, int w, int h) {
-		if (debug) {
-			gtr.setSmoothing(false);
-			gtr.beginRendering(w, h);
-			gtr.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-			gtr.flush();
-			gtr.draw("layers = "+String.valueOf(layers.size()), w - 75, 20);
-			gtr.draw("active = "+String.valueOf(active), w - 75, 5);
-			if (kpixReader != null) {
-				gtr.draw("reader index = "+String.valueOf(readerIndex), 5, 5);
-				gtr.draw("data timestamp = "+String.valueOf(timeStamp), 5, 20);
-				if (playing) gtr.draw("playback speed = "+String.valueOf((int)100.0f/playSpeed)+"%", 5, 35);
-				if (labels) {
-					int offY = playing ? 15 : 0; 
-					switch (labelMode) {
-					case 0: gtr.draw("label mode = delta", 5, 35 + offY); break;
-					case 1: gtr.draw("label mode = ADC", 5, 35 + offY); break;
-					case 2: gtr.draw("label mode = %delta", 5, 35 + offY); break;
-					}
-				}
-				if (calibrated) gtr.draw("scale factor = "+String.valueOf(SCALE_FACTOR), 5, 35 + (labels ? 15 : 0) + (playing ? 15 : 0));
-				gtr.draw(fileName, 5, h - 15);
-			}
-			gtr.endRendering();
-			
+		if (showMessages) mBoxH += .2f*(110 - mBoxH); 
+		else mBoxH += .2f*(25 - mBoxH);
+		
+		
+		mBoxX = w/2 - mBoxW/2;
+		mBoxY = h - mBoxH - 8;
+		
+		if ((showMessages || newMessage) && mBoxAlpha < 1.0f) {
+			mBoxAlpha += 0.1f * (1 - mBoxAlpha);
+		} else if (!(showMessages || newMessage)) {
+			mBoxAlpha = mBoxAlpha > 0.001f ? mBoxAlpha - 0.075f * (1.01f - mBoxAlpha) : 0;
+		} 
+		
+		if (mCounter > 0 && newMessage) mCounter--;
+		else {
+			newMessage = false;
+			mCounter = 50;
 		}
+		
+		if (mBoxAlpha > 0.001f) {
+			gl2.glMatrixMode(GL2.GL_PROJECTION);
+			gl2.glPushMatrix();
+			gl2.glLoadIdentity();
+			gl2.glOrtho(0, w, h, 0, 0, 1);
+			gl2.glColor4f(1.0f, 1.0f, 1.0f, mBoxAlpha * 0.65f);
+			gl2.glBegin(GL2.GL_QUADS);
+			gl2.glVertex2f(mBoxX, mBoxY + mBoxH);
+			gl2.glVertex2f(mBoxX + mBoxW, mBoxY + mBoxH);
+			gl2.glVertex2f(mBoxX + mBoxW, mBoxY);
+			gl2.glVertex2f(mBoxX, mBoxY);
+			gl2.glEnd();
+			gl2.glPopMatrix();
+			gl2.glMatrixMode(GL2.GL_MODELVIEW);
+		}
+		
+		
+		gtr.beginRendering(w, h);
+		gtr.setSmoothing(false);
+		
+		gtr.setColor(0.0f, 0.0f, 0.0f, mBoxAlpha);
+		int j = showMessages ? mBoxH/25 : 1;
+		for (int i = 0; i < j && i < messages.size(); i++) {
+			gtr.draw(messages.get(i), mBoxX + 4, (25*(i)) + 16);
+		}
+		gtr.flush();
+		gtr.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+		gtr.draw("layers = "+String.valueOf(layers.size()), w - 75, 20);
+		gtr.draw("active = "+String.valueOf(active), w - 75, 5);
+		if (kpixReader != null) {
+			gtr.draw("reader index = "+String.valueOf(readerIndex), 5, 5);
+			gtr.draw("data timestamp = "+String.valueOf(timeStamp), 5, 20);
+			if (playing) gtr.draw("playback speed = "+String.valueOf((int)100.0f/playSpeed)+"%", 5, 35);
+			if (labels) {
+				int offY = playing ? 15 : 0; 
+				switch (labelMode) {
+				case 0: gtr.draw("label mode = delta", 5, 35 + offY); break;
+				case 1: gtr.draw("label mode = ADC", 5, 35 + offY); break;
+				case 2: gtr.draw("label mode = %delta", 5, 35 + offY); break;
+				case 3: gtr.draw("label mode = indices", 5, 35 + offY); break;
+				case 4: gtr.draw("label mode = ADC-min", 5, 35 + offY); break;
+				}
+			}
+			if (calibrated) {
+				gtr.draw("scale factor = "+String.valueOf(SCALE_FACTOR), 5, 35 + (labels ? 15 : 0) + (playing ? 15 : 0));
+				gtr.draw("display mode = "+(dispMode > 0 ? "calib" : "abs"), 5, 50 + (labels ? 15 : 0) + (playing ? 15 : 0));
+			}
+			gtr.draw("f: " + fileName, 5, h - 15);
+			gtr.draw("c: " + calibFileName, 5, h - 30);
+		}
+		gtr.flush();
+		gtr.endRendering();
+			
 	}
 	
 	public void update() {
@@ -311,12 +413,11 @@ public class HexDetector {
 		
 		
 		if (Math.abs(targetXOffset - xOffset) > 0.01f || Math.abs(targetYOffset - yOffset) > 0.01f) {
-			xOffset += (targetXOffset - xOffset) * 0.1f;
-			yOffset += (targetYOffset - yOffset) * 0.1f;
+			xOffset += (targetXOffset - xOffset) * 0.13f;
+			yOffset += (targetYOffset - yOffset) * 0.13f;
 		}
 		
-		//
-		if (playing && kpixReader.hasNextRecord()) {
+		if (playing && kpixReader != null && kpixReader.hasNextRecord()) {
 			if (playOffset >= playSpeed) {
 				stepData();
 				playOffset = 1;
@@ -354,6 +455,11 @@ public class HexDetector {
 	
 	public void zoom(float dz) { targetZoom += dz; }
 	
+	public void highlightPixel(int index) {
+		if (index >= 0 && index < 1024) highlighted = index;
+		else highlighted = -1;
+	}
+	
 	public void setData(float[][] d) {
 		trueData = d[0];
 		data = new int[d[1].length];
@@ -376,6 +482,7 @@ public class HexDetector {
 	}
 	
 	public void stepData() { 
+		if (kpixReader == null) return;
 		if (marker < dataBuf.size() - 1) {
 			marker++;
 			Pair<float[], int[]> d = dataBuf.get(marker);
@@ -409,10 +516,10 @@ public class HexDetector {
 
 		} catch (Exception e) {
 			System.out.println("Failed to step data forward.");
+			sendMessage("Failed to step data forward.");
 			playing = false;
 			return;
 		}
-		if (!playing) System.out.println("Data stepped forward.");
 		
 		dataBuf.add(new Pair<float[], int[]>(trueData, data));
 		indexBuf.add(readerIndex);
@@ -435,31 +542,37 @@ public class HexDetector {
 	}
 	
 	public void resetData() { 
+		if (kpixReader == null) return;
 		kpixReader.rewind();
 		readerIndex = 0;
 		marker = 0;
 		dataBuf.clear();
 		indexBuf.clear();
 		System.out.println("Data record rewound.");
+		sendMessage("Data record rewound.");
 	}
 	
 	public void calibrateData() { 
+		if (kpixReader == null) return;
 		try {
 			System.out.print("Calibrating...");
+			sendMessage("Calibrating...");
 			int count = 0;
-			int offset = 0;
+//			int offset = 0;
 			Arrays.fill(means, 0);
 			Arrays.fill(variances, 0);
+			Arrays.fill(calibMins, -1);
+			kpixReader.rewind();
 			KpixRecord record = kpixReader.readRecord();
 			count++;
 			
 	        while (kpixReader.hasNextRecord()) {
 	        	record = kpixReader.readRecord();
-	        	if (offset < 5) {
-	        		offset++;
-	        		continue;
-	        	} 
-	        	offset = 0;
+//	        	if (offset < 5) {
+//	        		offset++;
+//	        		continue;
+//	        	} 
+//	        	offset = 0;
 	        	if (record.getRecordType() != KpixRecord.KpixRecordType.DATA || record.getRecordLength() < 1000) continue;
         	
 	        	
@@ -474,27 +587,59 @@ public class HexDetector {
 		        	if (s.getType() != KpixSample.KpixSampleType.KPIX) continue;
 		        	int index = s.getChannel();
 		        	int adc = s.getAdc();
-		        	float delta =  adc - means[index];
-		        	means[index] +=  delta/count;
-		        	variances[index] += delta*(adc - means[index]);
+//		        	float delta =  adc - means[index];
+//		        	means[index] +=  delta/count;
+//		        	variances[index] += delta*(adc - means[index]);
 		        	
+		        	if (calibMins[index] < 0 || adc < calibMins[index]) calibMins[index] = adc;
+		        	
+		        	//
+		        	means[index] += adc;
+		        	variances[index] += adc*adc;
+		        	//
 		        }
-	        	if (count > 500) break;
+//	        	if (count > 500) break;
 	        }
 	        for (int i = 0; i < variances.length; i++) {
-	        	variances[i] = (float) Math.sqrt(variances[i]/count);
+	        	//
+	        	float sum = means[i];
+	        	float sqrSum = variances[i];
+	        	means[i] = sum/count - calibMins[i];
+	        	variances[i] = (float) Math.sqrt(((sqrSum - 2*calibMins[i]*sum + count*Math.pow(calibMins[i], 2))/count - Math.pow(means[i], 2)));
+	        	//
+//	        	variances[i] = (float) Math.sqrt(variances[i]/count);
 	        }
 	        
 
 		} catch (Exception e) {
 			System.out.println("Failed to calibrate data.");
+			sendMessage("Failed to calibrate data.");
+			calibrated = false;
 			e.printStackTrace();
 			return;
 		}
 		
 		calibrated = true;
+		calibFileName = kpixReader.getName();
+		dispMode = 1;
 		kpixReader.rewind();
+		readerIndex = 0;
 		System.out.println(" done.");
+		sendMessage("Calibrating... done!");
+		stepData();
+	}
+	
+	public String currFileName() { return fileName; }
+	
+	public void sendMessage(String mess) {
+		long t = System.currentTimeMillis();
+		int s = (int) (t/1000);
+		int m = (int) (s/60);
+		int h = (int) (m/60) + 5;
+		
+		messages.add(0, String.format("%02d:%02d:%02d ", h%24, m%60, s%60) + mess);
+		newMessage = true;
+		if (messages.size() > 9) messages.remove(messages.size() - 1);
 	}
 	
 	public static float[][] getArrays(Grid.tileType type) {
