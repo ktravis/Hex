@@ -40,7 +40,7 @@ public class HexDetector {
 	private ArrayList<String> messages;
 	private int mBoxY = 0;
 	private int mBoxX = 0;
-	private int mBoxW = 300;
+	private int mBoxW = 375;
 	private int mBoxH = 25;
 	private int dispMode = 0; //0 : Log scale, 1 : Calibrated scale
 	private int labelMode = 0;
@@ -328,7 +328,7 @@ public class HexDetector {
 		if (mCounter > 0 && newMessage) mCounter--;
 		else {
 			newMessage = false;
-			mCounter = 50;
+			mCounter = 115;
 		}
 		
 		if (mBoxAlpha > 0.001f) {
@@ -455,8 +455,7 @@ public class HexDetector {
 	public void zoom(float dz) { targetZoom += dz; }
 	
 	public void highlightPixel(int index) {
-		if (index >= 0 && index < 1024) highlighted = index;
-		else highlighted = -1;
+		if (index > 0 && index < 1024) highlighted = index;
 	}
 	
 	public void setData(float[][] d) {

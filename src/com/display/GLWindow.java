@@ -19,6 +19,8 @@ import javax.swing.JTable;
 import javax.swing.JToolBar;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 
@@ -40,6 +42,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowAdapter;
@@ -114,7 +118,7 @@ public class GLWindow extends JFrame {
 					}
                 	capturing = false;
                 	System.out.print(" done.\n");
-                	h.sendMessage(String.format("Capturing file '%s'... done!", currCapture.toString()));
+                	h.sendMessage(String.format("Captured file '%s'!", currCapture.toString()));
                 }
                 
                 if (h.isPlaying() && updateLive) updateGUI();
@@ -161,6 +165,19 @@ public class GLWindow extends JFrame {
 		
 		KeyHandler keyHandler = new KeyHandler(this, h);
 		new AWTKeyAdapter(keyHandler).addTo(glCanvas);
+		
+		eastPanel.addKeyListener(new KeyListener() {
+			@Override
+			public void keyTyped(KeyEvent e) {
+			}
+			@Override
+			public void keyReleased(KeyEvent e) {
+			}
+			@Override
+			public void keyPressed(KeyEvent e) {
+				glCanvas.dispatchEvent(e);
+			}
+		});
 		
 		FPSAnimator animator = new FPSAnimator(glCanvas, 60);
 		animator.add(glCanvas);
@@ -369,7 +386,9 @@ public class GLWindow extends JFrame {
 			playPanel.add(b);
 		}
 		
-		DefaultTableModel model = new DefaultTableModel(new Object[]{"index", "ADC", "min", "mean"}, 0);
+		final DefaultTableModel model = new DefaultTableModel(new Object[]{"index", "ADC", "min", "mean"}, 0) {
+			@Override public boolean isCellEditable(int row, int column) { return false; }
+		};
 		dataTable = new JTable(model);
 		float[] data = h.getData();
 		float[] min = h.getMins();
@@ -378,10 +397,12 @@ public class GLWindow extends JFrame {
 			model.addRow(new Object[]{i, data[i], min[i], mean[i]});
 		}
 		dataTable.addMouseMotionListener(new MouseMotionListener() {
+			int last = 0;
 			@Override
 			public void mouseMoved(MouseEvent e) {
 				int row = dataTable.rowAtPoint(e.getPoint());
-				h.highlightPixel((Integer) dataTable.getValueAt(row, 0));
+				if (row != last) h.highlightPixel((Integer) dataTable.getValueAt(row, 0));
+				last = row;
 			}
 			@Override
 			public void mouseDragged(MouseEvent e) {
@@ -389,14 +410,13 @@ public class GLWindow extends JFrame {
 		});
 		dataTable.setFillsViewportHeight(true);
 		dataTable.setAutoCreateRowSorter(false);
+		dataTable.setFocusable(false);
 		TableRowSorter<DefaultTableModel> trs = new TableRowSorter<DefaultTableModel>(model);
-		trs.setComparator(0, new NumComparator<Integer>());
-		trs.setComparator(1, new NumComparator<Float>());
-		trs.setComparator(2, new NumComparator<Float>());
-		trs.setComparator(3, new NumComparator<Float>());
+		for (int i = 0; i < 4; i++) {
+			trs.setComparator(i, i > 0 ? new NumComparator<Float>() : new NumComparator<Integer>());
+		}
 		dataTable.setRowSorter(trs);
 		JScrollPane dataPane = new JScrollPane(dataTable);
-		
 		
 		for (JPanel p : new JPanel[] {filePanel, dropdownPanel, sliderPanel, playPanel, speedPanel, }) {
 			p.setPreferredSize(new Dimension(180, 30));
