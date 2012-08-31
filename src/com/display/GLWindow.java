@@ -20,10 +20,12 @@ import javax.swing.JToolBar;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 
 import util.Data;
 import util.KeyHandler;
 import util.MouseHandler;
+import util.NumComparator;
 
 import com.detector.HexDetector;
 import com.jogamp.opengl.util.FPSAnimator;
@@ -44,6 +46,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
+import java.util.Comparator;
 
 import com.jogamp.newt.event.awt.AWTKeyAdapter;
 import com.jogamp.newt.event.awt.AWTMouseAdapter;
@@ -57,6 +60,7 @@ public class GLWindow extends JFrame {
 	GLCanvas glCanvas;
 	String[] dataString;
 	JTable dataTable;
+	private boolean adjusted = false;
 	
 	HexDetector h;
 	boolean capturing = false;
@@ -189,7 +193,7 @@ public class GLWindow extends JFrame {
 		bar.setFloatable(false);
 		bar.setPreferredSize(new Dimension(180, DISPLAY_HEIGHT));
 
-		final JComboBox displayMenu = new JComboBox<String>(new String[]{"Absolute", "Calibrated"});
+		final JComboBox displayMenu = new JComboBox(new String[]{"Absolute", "Calibrated"});
 		
 		final JLabel fileLabel = new JLabel("File: No file selected.");
 		fileLabel.setSize(new Dimension(180, 30));
@@ -200,8 +204,8 @@ public class GLWindow extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				FileDialog fd = new FileDialog(new JFrame(), "Import...", FileDialog.LOAD);
-				fd.setAutoRequestFocus(true);
 				fd.setFile("*.bin");
+				fd.requestFocus();
 				fd.setVisible(true);
 				if (fd.getFile() != null) h.setKpixReader(Data.readKpixDataFile(fd.getDirectory()+fd.getFile()));
 				fileLabel.setText("File: " + fd.getFile());
@@ -220,6 +224,7 @@ public class GLWindow extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				h.calibrateData();
 				calibFileLabel.setText("Calib: " + h.currFileName());
+				updateGUI();
 				displayMenu.setSelectedItem("Calibrated");
 			} 
 		});
@@ -259,7 +264,7 @@ public class GLWindow extends JFrame {
 		displayPanel.add(displayMenu, BorderLayout.CENTER);
 		dropdownPanel.add(displayPanel);
 		
-		final JComboBox labelMenu = new JComboBox<String>(new String[] {"delta", "ADC", "% delta", "Indices", "ADC - min"});
+		final JComboBox labelMenu = new JComboBox(new String[] {"delta", "ADC", "% delta", "Indices", "ADC - min"});
 		labelMenu.addActionListener(new ActionListener() {
 			int last = 1;
 			@Override
@@ -364,11 +369,13 @@ public class GLWindow extends JFrame {
 			playPanel.add(b);
 		}
 		
-		DefaultTableModel model = new DefaultTableModel(new Object[]{"index", "ADC"}, 0);
+		DefaultTableModel model = new DefaultTableModel(new Object[]{"index", "ADC", "min", "mean"}, 0);
 		dataTable = new JTable(model);
 		float[] data = h.getData();
+		float[] min = h.getMins();
+		float[] mean = h.getMeans();
 		for (int i = 0; i < 1024; i++) {
-			model.addRow(new Object[]{i, data[i]});
+			model.addRow(new Object[]{i, data[i], min[i], mean[i]});
 		}
 		dataTable.addMouseMotionListener(new MouseMotionListener() {
 			@Override
@@ -381,7 +388,13 @@ public class GLWindow extends JFrame {
 			}
 		});
 		dataTable.setFillsViewportHeight(true);
-		dataTable.setAutoCreateRowSorter(true);
+		dataTable.setAutoCreateRowSorter(false);
+		TableRowSorter<DefaultTableModel> trs = new TableRowSorter<DefaultTableModel>(model);
+		trs.setComparator(0, new NumComparator<Integer>());
+		trs.setComparator(1, new NumComparator<Float>());
+		trs.setComparator(2, new NumComparator<Float>());
+		trs.setComparator(3, new NumComparator<Float>());
+		dataTable.setRowSorter(trs);
 		JScrollPane dataPane = new JScrollPane(dataTable);
 		
 		
@@ -418,6 +431,17 @@ public class GLWindow extends JFrame {
 		});
 		bar.add(labelCheckBox);
 		
+		JCheckBox adjustedCheckBox = new JCheckBox("adjust");
+		adjustedCheckBox.setSelected(adjusted);
+		adjustedCheckBox.addItemListener(new ItemListener() {
+			@Override
+			public void itemStateChanged(ItemEvent e) {
+				adjusted = e.getStateChange() == e.SELECTED ? true : false;
+				updateGUI();
+			}
+		});
+		bar.add(adjustedCheckBox);
+		
 		
 		for (JLabel l : new JLabel[]{fileLabel, calibFileLabel, displayLabel, labelsLabel, cLabel, sLabel}) {
 			l.setFocusable(false);
@@ -442,12 +466,18 @@ public class GLWindow extends JFrame {
 		}
 	}
 	
+
+	
 	public void updateGUI() { 
 		float[]	data = h.getData();
+		float[] min = h.getMins();
+		float[] mean = h.getMeans();
 		DefaultTableModel m = (DefaultTableModel) dataTable.getModel();
 		for (int i = 0; i < 1024; i++) {
 			int index = (Integer) m.getValueAt(i, 0);
-			m.setValueAt(data[index], i, 1);
+			m.setValueAt(adjusted ? data[index] - min[index] : data[index], i, 1);
+			m.setValueAt(min[index], i, 2);
+			m.setValueAt(adjusted ? mean[index] - min[index] : mean[index], i, 3);
 		}
 	}
 	

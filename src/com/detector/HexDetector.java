@@ -1,8 +1,5 @@
 package com.detector;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -83,6 +80,8 @@ public class HexDetector {
 	float[] y;
 	
 	public float[] getData() { return trueData; }
+	public float[] getMins() { return calibMins; }
+	public float[] getMeans() { return means; }
 	public void togglePlaying() { playing = !playing; }
 	public void setPlayspeed(float s) { playSpeed = s; if (s < 1 && playing) togglePlaying(); } 
 	public void toggleLabels() { labels = !labels; }
@@ -244,7 +243,7 @@ public class HexDetector {
 				
 				if (layerIndex == 0) {
 					if (calibrated && dispMode == 1) {
-						float c = (float) (SCALE_FACTOR*(trueData[index] - means[index] - calibMins[index])/variances[index]);
+						float c = (float) (SCALE_FACTOR*(Math.abs(trueData[index] - means[index]))/variances[index]);
 						gl2.glColor4f(c, 0, 1 - c, alpha);
 					} else {
 						float c = trueData[index];
@@ -281,9 +280,9 @@ public class HexDetector {
 					String h = "";
 					if (!calibrated) labelMode = (labelMode == 1) || (labelMode == 3) ? labelMode : 1;
 					switch (labelMode) {
-					case 0: h = String.valueOf((int)(trueData[index] - means[index] - calibMins[index])); break;
+					case 0: h = String.valueOf((int)(trueData[index] - means[index])); break;
 					case 1: h = String.valueOf((int)(trueData[index])); break;
-					case 2: h = String.valueOf((int)(100*(trueData[index] - means[index] - calibMins[index])/variances[index])); break;
+					case 2: h = String.valueOf((int)(100*(trueData[index] - means[index])/variances[index])); break;
 					case 3: h = String.valueOf(index); break;
 					case 4: h = String.valueOf((int)(trueData[index] - calibMins[index])); break;
 					
@@ -557,7 +556,7 @@ public class HexDetector {
 		try {
 			System.out.print("Calibrating...");
 			sendMessage("Calibrating...");
-			int count = 0;
+			double count = 0;
 //			int offset = 0;
 			Arrays.fill(means, 0);
 			Arrays.fill(variances, 0);
@@ -574,7 +573,6 @@ public class HexDetector {
 //	        	} 
 //	        	offset = 0;
 	        	if (record.getRecordType() != KpixRecord.KpixRecordType.DATA || record.getRecordLength() < 1000) continue;
-        	
 	        	
 	        	count++;
 	        	
@@ -587,27 +585,17 @@ public class HexDetector {
 		        	if (s.getType() != KpixSample.KpixSampleType.KPIX) continue;
 		        	int index = s.getChannel();
 		        	int adc = s.getAdc();
-//		        	float delta =  adc - means[index];
-//		        	means[index] +=  delta/count;
-//		        	variances[index] += delta*(adc - means[index]);
+		        	double delta =  adc - means[index];
+		        	means[index] +=  delta/count;
+		        	variances[index] += delta*(adc - means[index]);
 		        	
 		        	if (calibMins[index] < 0 || adc < calibMins[index]) calibMins[index] = adc;
 		        	
-		        	//
-		        	means[index] += adc;
-		        	variances[index] += adc*adc;
-		        	//
 		        }
 //	        	if (count > 500) break;
 	        }
 	        for (int i = 0; i < variances.length; i++) {
-	        	//
-	        	float sum = means[i];
-	        	float sqrSum = variances[i];
-	        	means[i] = sum/count - calibMins[i];
-	        	variances[i] = (float) Math.sqrt(((sqrSum - 2*calibMins[i]*sum + count*Math.pow(calibMins[i], 2))/count - Math.pow(means[i], 2)));
-	        	//
-//	        	variances[i] = (float) Math.sqrt(variances[i]/count);
+	        	variances[i] = (float) Math.sqrt(variances[i]/count);
 	        }
 	        
 
@@ -635,7 +623,7 @@ public class HexDetector {
 		long t = System.currentTimeMillis();
 		int s = (int) (t/1000);
 		int m = (int) (s/60);
-		int h = (int) (m/60) + 5;
+		int h = (int) (m/60) - 19;
 		
 		messages.add(0, String.format("%02d:%02d:%02d ", h%24, m%60, s%60) + mess);
 		newMessage = true;
