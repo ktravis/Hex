@@ -48,3 +48,5 @@ Properties and their corresponding options are evaluated as follows (in the orde
     zoom : [float]                      Set distance from the detector - negative values are "between" detector and user.
     axis : [float], [float]             Set the x, y position of the viewing frame relative to the center of the detector.
     index : [integer]                   Attempts to seek the provided index in a previously loaded data file.
+    
+If a file `def.config` is present in the `./res/` directory, it will be loaded and parsed on startup.
