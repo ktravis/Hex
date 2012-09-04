@@ -21,6 +21,7 @@ public class KpixFileReader implements Closeable {
     private final MappedByteBuffer mapFile;
     //
     private final String fileName;
+    private final String filePath;
     //
     
     public KpixFileReader(File file) throws FileNotFoundException, IOException {
@@ -29,10 +30,12 @@ public class KpixFileReader implements Closeable {
         mapFile.order(ByteOrder.LITTLE_ENDIAN);
         //
         fileName = file.getName();
+        filePath = file.getPath();
         //
     }
     //
     public String getName() { return fileName; }
+    public String getPath() { return filePath; }
     //
     public KpixRecord readRecord() throws IOException {
         if (!mapFile.hasRemaining()) return null;

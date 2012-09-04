@@ -1,8 +1,6 @@
 package util;
 
 
-import javax.swing.JTable;
-
 import com.detector.HexDetector;
 import com.jogamp.newt.event.MouseAdapter;
 import com.jogamp.newt.event.MouseEvent;
@@ -70,7 +68,7 @@ public class MouseHandler extends MouseAdapter {
 			dx = newx - lastx;
 			dy = newy - lasty;
 			
-			detector.setAxisPosition(dx/2.0f, dy/2.0f);
+			detector.moveAxis(dx/2.0f, dy/2.0f);
 		}
 		
 	}

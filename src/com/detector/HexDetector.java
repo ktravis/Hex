@@ -56,7 +56,9 @@ public class HexDetector {
 	private int highlighted = -1;
 	
 	private KpixFileReader kpixReader;
-	private String fileName;
+	private String filePath = "none";
+	private String fileName = "none";
+	private String calibFilePath = "none";
 	private String calibFileName = "none";
 	private int readerIndex = 0;
 	private int timeStamp = 0;
@@ -66,6 +68,8 @@ public class HexDetector {
 	private List<Pair<float[], int[]>> dataBuf;
 	private List<Integer> indexBuf;
 	private int marker = 0;
+	public boolean updateLive = true;
+	public boolean adjusted = false;
 	public class Pair<X, Y> { 
 		  public final X x; 
 		  public final Y y; 
@@ -440,9 +444,13 @@ public class HexDetector {
 		
 	}
 	
-	public void setAxisPosition(float dx, float dy) {
+	public void moveAxis(float dx, float dy) {
 		targetXOffset += dx;
 		targetYOffset += dy;
+	}
+	public void setAxisPosition(float x, float y) {
+		targetXOffset = x;
+		targetYOffset = y;
 	}
 	
 	public void resetOrientation() {
@@ -453,6 +461,7 @@ public class HexDetector {
 	public float getAxisDepth() { return 40 - active * 40; }
 	
 	public void zoom(float dz) { targetZoom += dz; }
+	public void setZoom(float z) { targetZoom = z; }
 	
 	public void highlightPixel(int index) {
 		if (index > 0 && index < 1024) highlighted = index;
@@ -472,6 +481,7 @@ public class HexDetector {
 		if (r == null) return;
 		kpixReader = r;
 		fileName = r.getName();
+		filePath = r.getPath();
 		readerIndex = 0;
 		timeStamp = 0;
 		dataBuf = new ArrayList<Pair<float[], int[]>>();
@@ -548,6 +558,24 @@ public class HexDetector {
 		indexBuf.clear();
 		System.out.println("Data record rewound.");
 		sendMessage("Data record rewound.");
+		stepData();
+	}
+	
+	public void seek(int index) {
+		System.out.println(index);
+		if (kpixReader == null) return;
+		if (readerIndex > index) {
+			resetData();
+			if (readerIndex > index) {
+				sendMessage(String.format("Unable to seek index: %d.", index));
+				return;
+			}
+		}
+		while(kpixReader.hasNextRecord()) {
+			if (readerIndex == index) return;
+			stepData();
+		}
+		sendMessage(String.format("Unable to seek index: %d.", index));
 	}
 	
 	public void calibrateData() { 
@@ -608,6 +636,7 @@ public class HexDetector {
 		
 		calibrated = true;
 		calibFileName = kpixReader.getName();
+		calibFilePath = kpixReader.getPath();
 		dispMode = 1;
 		kpixReader.rewind();
 		readerIndex = 0;
@@ -619,15 +648,32 @@ public class HexDetector {
 	public String currFileName() { return fileName; }
 	
 	public void sendMessage(String mess) {
-		long t = System.currentTimeMillis();
-		int s = (int) (t/1000);
-		int m = (int) (s/60);
-		int h = (int) (m/60) - 19;
+		int[] t = Data.getTime();
 		
-		messages.add(0, String.format("%02d:%02d:%02d ", h%24, m%60, s%60) + mess);
+		messages.add(0, String.format("%02d:%02d:%02d ", t[0], t[1], t[2]) + mess);
 		newMessage = true;
 		if (messages.size() > 9) messages.remove(messages.size() - 1);
 	}
+	
+	public void saveConfig(String fName) {
+		String[] lines = new String[]{
+				calibFileName == fileName ? "browse : " + fileName : "browse : " + calibFilePath,
+				"calibrate : " + (calibrated ? "true" : "false"),
+				calibFileName == fileName ? "" : "browse : " + filePath,
+				"live-update : " + (updateLive ? "true" : "false"),
+				"adjusted : " + (adjusted ? "true" : "false"), 
+				String.format("scale : %f", SCALE_FACTOR),
+				"labels : " + (labels ? "true" : "false"),
+				"label-type : " + new String[]{"delta", "ADC", "% delta", "indices", "ADC - min"}[labelMode],
+				"display : " + (dispMode > 0 ? "calib" : "abs"), 
+				"speed : " + String.valueOf(playSpeed * 10), 
+				"zoom : " + String.valueOf(zoom),
+				String.format("axis : %f, %f", -targetXOffset, targetYOffset)
+		};
+		Data.saveFile(lines, fName);
+		sendMessage("Configuration file '"+fName+"' saved!");
+	}
+	
 	
 	public static float[][] getArrays(Grid.tileType type) {
 		if (type == null) return null;

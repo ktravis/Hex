@@ -6,28 +6,13 @@ import javax.media.opengl.GLException;
 import javax.media.opengl.GLProfile;
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.awt.GLCanvas;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JSlider;
 import javax.swing.JTable;
-import javax.swing.JToolBar;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableRowSorter;
 
 import util.Data;
 import util.KeyHandler;
 import util.MouseHandler;
-import util.NumComparator;
 
 import com.detector.HexDetector;
 import com.jogamp.opengl.util.FPSAnimator;
@@ -35,28 +20,20 @@ import com.jogamp.opengl.util.awt.Screenshot;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.FileDialog;
-import java.awt.FlowLayout;
-import java.awt.Insets;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
-import java.util.Comparator;
 
 import com.jogamp.newt.event.awt.AWTKeyAdapter;
 import com.jogamp.newt.event.awt.AWTMouseAdapter;
 
 
 public class GLWindow extends JFrame {
+	private static final long serialVersionUID = -1508624949773190945L;
+	
 	public static final int DISPLAY_WIDTH = 720;
 	public static final int DISPLAY_HEIGHT = 540;
 	GLProfile glProfile; 
@@ -64,7 +41,7 @@ public class GLWindow extends JFrame {
 	GLCanvas glCanvas;
 	String[] dataString;
 	JTable dataTable;
-	private boolean adjusted = false;
+	GUIBar bar;
 	
 	HexDetector h;
 	boolean capturing = false;
@@ -121,8 +98,8 @@ public class GLWindow extends JFrame {
                 	h.sendMessage(String.format("Captured file '%s'!", currCapture.toString()));
                 }
                 
-                if (h.isPlaying() && updateLive) updateGUI();
-                else if (!h.isPlaying() && wasPlaying) updateGUI();
+                if (h.isPlaying() && updateLive) bar.update();
+                else if (!h.isPlaying() && wasPlaying) bar.update();
                 
                 wasPlaying = h.isPlaying();
             }
@@ -150,7 +127,8 @@ public class GLWindow extends JFrame {
 		centerPanel.setPreferredSize(new Dimension(DISPLAY_WIDTH, DISPLAY_HEIGHT));
 		mainPanel.add(centerPanel, BorderLayout.CENTER);
 		
-		eastPanel.add(setupToolBar());
+		bar = new GUIBar(h);
+		eastPanel.add(bar);
 		eastPanel.setFocusable(false);
 		eastPanel.setPreferredSize(new Dimension(190, DISPLAY_HEIGHT));
 		mainPanel.add(eastPanel, BorderLayout.LINE_END);
@@ -204,302 +182,6 @@ public class GLWindow extends JFrame {
 		return false;
 	}
 	
-	public JToolBar setupToolBar() {
-		JToolBar bar = new JToolBar();
-		bar.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
-		bar.setFloatable(false);
-		bar.setPreferredSize(new Dimension(180, DISPLAY_HEIGHT));
-
-		final JComboBox displayMenu = new JComboBox(new String[]{"Absolute", "Calibrated"});
-		
-		final JLabel fileLabel = new JLabel("File: No file selected.");
-		fileLabel.setSize(new Dimension(180, 30));
-		fileLabel.setFont(Data.getFont(10));
-		JButton browse = new JButton("Browse...");
-		browse.setFocusable(false);
-		browse.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				FileDialog fd = new FileDialog(new JFrame(), "Import...", FileDialog.LOAD);
-				fd.setFile("*.bin");
-				fd.requestFocus();
-				fd.setVisible(true);
-				if (fd.getFile() != null) h.setKpixReader(Data.readKpixDataFile(fd.getDirectory()+fd.getFile()));
-				fileLabel.setText("File: " + fd.getFile());
-				updateGUI();
-				displayMenu.setSelectedItem("Absolute");
-			} 
-		});
-		
-		final JLabel calibFileLabel = new JLabel("Calib: No file selected.");
-		calibFileLabel.setSize(new Dimension(180, 30));
-		calibFileLabel.setFont(Data.getFont(10));
-		JButton calibrate = new JButton("Calibrate");
-		calibrate.setFocusable(false);
-		calibrate.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				h.calibrateData();
-				calibFileLabel.setText("Calib: " + h.currFileName());
-				updateGUI();
-				displayMenu.setSelectedItem("Calibrated");
-			} 
-		});
-		
-		JPanel filePanel = new JPanel();
-		filePanel.setLayout(new BoxLayout(filePanel, BoxLayout.X_AXIS));
-		browse.setMargin(new Insets(2, 1, 1, 2));
-		calibrate.setMargin(new Insets(2, 1, 1, 2));
-		
-		filePanel.add(browse);
-		filePanel.add(calibrate);
-		bar.add(fileLabel);
-		bar.add(calibFileLabel);
-		
-		JPanel dropdownPanel = new JPanel();
-		dropdownPanel.setLayout(new BoxLayout(dropdownPanel, BoxLayout.Y_AXIS));
-		
-		displayMenu.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				String sel = (String)displayMenu.getSelectedItem();
-				if (!h.isCalibrated()) {
-					displayMenu.setSelectedIndex(0);
-					return;
-				}
-				if (sel.contains("Absolute")) h.setDispMode(0);
-				else if (sel.contains("Calibrated") ) h.setDispMode(1);
-			}
-		});
-		
-		JLabel displayLabel = new JLabel("Display mode: ");
-		displayLabel.setPreferredSize(new Dimension(80, 10));
-		displayLabel.setFont(Data.getFont(10));
-		JPanel displayPanel = new JPanel();
-		displayPanel.setLayout(new BorderLayout());
-		displayPanel.add(displayLabel, BorderLayout.WEST);
-		displayPanel.add(displayMenu, BorderLayout.CENTER);
-		dropdownPanel.add(displayPanel);
-		
-		final JComboBox labelMenu = new JComboBox(new String[] {"delta", "ADC", "% delta", "Indices", "ADC - min"});
-		labelMenu.addActionListener(new ActionListener() {
-			int last = 1;
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				int curr = ((JComboBox)e.getSource()).getSelectedIndex();
-				if (!h.isCalibrated() && (curr != 1 && curr != 3)) labelMenu.setSelectedIndex(last);
-				else {
-					last = curr;
-					h.setLabelMode(curr);
-				}
-			}
-		});
-		labelMenu.setSelectedIndex(1);
-		
-		JLabel labelsLabel = new JLabel("Label mode: ");
-		labelsLabel.setPreferredSize(new Dimension(80, 10));
-		labelsLabel.setFont(Data.getFont(10));
-		JPanel labelPanel = new JPanel();
-		
-		for (JComboBox cb : new JComboBox[]{displayMenu, labelMenu}) {
-			cb.setFont(Data.getFont(10));
-			cb.setFocusable(false);
-			cb.setPreferredSize(new Dimension(80, 15));
-		}
-		
-		labelPanel.add(labelsLabel, BorderLayout.WEST);
-		labelPanel.add(labelMenu, BorderLayout.CENTER);
-		dropdownPanel.add(labelPanel);
-		
-		JPanel sliderPanel = new JPanel();
-		sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.Y_AXIS));
-		final FloatSlider coeff = new  FloatSlider(0, 200, 50, 100);
-		final JLabel cLabel = new JLabel("Scale coeff. : 0.5");
-		coeff.addChangeListener(new ChangeListener(){
-			@Override
-			public void stateChanged(ChangeEvent e) {
-				h.setScale(coeff.getScaled());
-				cLabel.setText("Scale coeff. : " + String.valueOf(coeff.getScaled()));
-			}
-		});
-		coeff.setFocusable(false);
-		sliderPanel.add(coeff);
-		sliderPanel.add(cLabel);
-		
-		JPanel speedPanel = new JPanel();
-		speedPanel.setLayout(new BoxLayout(speedPanel, BoxLayout.Y_AXIS));
-		final JSlider speed = new  JSlider(0, 100, 100);
-		final JLabel sLabel = new JLabel("Playspeed : 100%");
-		speed.addChangeListener(new ChangeListener(){
-			@Override
-			public void stateChanged(ChangeEvent e) {
-				h.setPlayspeed(100.0f/speed.getValue());
-				sLabel.setText("Playspeed : " + String.valueOf(speed.getValue()) + "%");
-			}
-		});
-		speed.setFocusable(false);
-		speedPanel.add(speed);
-		speedPanel.add(sLabel);
-		
-		JPanel playPanel = new JPanel();
-		playPanel.setLayout(new BoxLayout(playPanel, BoxLayout.X_AXIS));
-		final JButton reset = new JButton("<<");
-		reset.setMaximumSize(new Dimension(30, 30));
-		final JButton rew = new JButton("<");
-		rew.setMaximumSize(new Dimension(30, 30));
-		final JButton pp = new JButton("Play");
-		pp.setMaximumSize(new Dimension(45, 30));
-		final JButton step = new JButton(">");
-		step.setMaximumSize(new Dimension(30, 30));
-		reset.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				h.resetData();
-				updateGUI();
-			}
-		});
-		rew.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				h.stepDataBack();
-				updateGUI();
-			}
-		});
-		pp.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				h.togglePlaying();
-				pp.setText(h.isPlaying() ? "Pause" : "Play");
-			}
-		});
-		step.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				h.stepData();
-				updateGUI();
-			}
-		});
-		for (JButton b : new JButton[] {reset, rew, pp, step}) {
-			b.setFocusable(false);
-			b.setFont(Data.getFont(12));
-			b.setMargin(new Insets(2, 1, 1, 2));
-			playPanel.add(b);
-		}
-		
-		final DefaultTableModel model = new DefaultTableModel(new Object[]{"index", "ADC", "min", "mean"}, 0) {
-			@Override public boolean isCellEditable(int row, int column) { return false; }
-		};
-		dataTable = new JTable(model);
-		float[] data = h.getData();
-		float[] min = h.getMins();
-		float[] mean = h.getMeans();
-		for (int i = 0; i < 1024; i++) {
-			model.addRow(new Object[]{i, data[i], min[i], mean[i]});
-		}
-		dataTable.addMouseMotionListener(new MouseMotionListener() {
-			int last = 0;
-			@Override
-			public void mouseMoved(MouseEvent e) {
-				int row = dataTable.rowAtPoint(e.getPoint());
-				if (row != last) h.highlightPixel((Integer) dataTable.getValueAt(row, 0));
-				last = row;
-			}
-			@Override
-			public void mouseDragged(MouseEvent e) {
-			}
-		});
-		dataTable.setFillsViewportHeight(true);
-		dataTable.setAutoCreateRowSorter(false);
-		dataTable.setFocusable(false);
-		TableRowSorter<DefaultTableModel> trs = new TableRowSorter<DefaultTableModel>(model);
-		for (int i = 0; i < 4; i++) {
-			trs.setComparator(i, i > 0 ? new NumComparator<Float>() : new NumComparator<Integer>());
-		}
-		dataTable.setRowSorter(trs);
-		JScrollPane dataPane = new JScrollPane(dataTable);
-		
-		for (JPanel p : new JPanel[] {filePanel, dropdownPanel, sliderPanel, playPanel, speedPanel, }) {
-			p.setPreferredSize(new Dimension(180, 30));
-			p.setFocusable(false);
-			bar.add(p);
-		}
-		dataPane.setFocusable(false);
-		dataPane.setPreferredSize(new Dimension(180, 300));
-		dropdownPanel.setPreferredSize(new Dimension(180, 40));
-		playPanel.setPreferredSize(new Dimension(180, 20));
-		
-		bar.add(dataPane);
-		
-		JCheckBox liveUpdateBox = new JCheckBox("update live");
-		liveUpdateBox.setSelected(updateLive);
-		liveUpdateBox.addItemListener(new ItemListener() {
-			@Override
-			public void itemStateChanged(ItemEvent e) {
-				updateLive = e.getStateChange() == e.SELECTED ? true : false;
-			}
-		});
-		bar.add(liveUpdateBox);
-		
-		JCheckBox labelCheckBox = new JCheckBox("labels");
-		labelCheckBox.setSelected(false);
-		labelCheckBox.addItemListener(new ItemListener() {
-			@Override
-			public void itemStateChanged(ItemEvent e) {
-				if (h.labels() == (e.getStateChange() == e.SELECTED)) return;
-				else h.toggleLabels();
-			}
-		});
-		bar.add(labelCheckBox);
-		
-		JCheckBox adjustedCheckBox = new JCheckBox("adjust");
-		adjustedCheckBox.setSelected(adjusted);
-		adjustedCheckBox.addItemListener(new ItemListener() {
-			@Override
-			public void itemStateChanged(ItemEvent e) {
-				adjusted = e.getStateChange() == e.SELECTED ? true : false;
-				updateGUI();
-			}
-		});
-		bar.add(adjustedCheckBox);
-		
-		
-		for (JLabel l : new JLabel[]{fileLabel, calibFileLabel, displayLabel, labelsLabel, cLabel, sLabel}) {
-			l.setFocusable(false);
-			l.setFont(Data.getFont(10));
-		}
-		
-		return bar;
-	}
-	
-	private class FloatSlider extends JSlider {
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = -5143507196060120764L;
-		float scale;
-		public FloatSlider (int min, int max, int val, int scale) {
-			super(min, max, val);
-			this.scale = scale;
-		}
-		public float getScaled() {
-			return getValue()/scale;
-		}
-	}
-	
-
-	
-	public void updateGUI() { 
-		float[]	data = h.getData();
-		float[] min = h.getMins();
-		float[] mean = h.getMeans();
-		DefaultTableModel m = (DefaultTableModel) dataTable.getModel();
-		for (int i = 0; i < 1024; i++) {
-			int index = (Integer) m.getValueAt(i, 0);
-			m.setValueAt(adjusted ? data[index] - min[index] : data[index], i, 1);
-			m.setValueAt(min[index], i, 2);
-			m.setValueAt(adjusted ? mean[index] - min[index] : mean[index], i, 3);
-		}
-	}
 	
 	public static void main(String[] args) {
 		

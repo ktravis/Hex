@@ -79,10 +79,12 @@ public class GUIBar extends JToolBar {
 				fd.setFile("*.bin");
 				fd.requestFocus();
 				fd.setVisible(true);
-				if (fd.getFile() != null) h.setKpixReader(Data.readKpixDataFile(fd.getDirectory()+fd.getFile()));
-				fileLabel.setText("File: " + fd.getFile());
-				update();
-				displayMenu.setSelectedItem("Absolute");
+				if (fd.getFile() != null) {
+					h.setKpixReader(Data.readKpixDataFile(fd.getDirectory()+fd.getFile()));
+					fileLabel.setText("File: " + fd.getFile());
+					update();
+					displayMenu.setSelectedItem("Absolute");
+				}
 			} 
 		});
 		
@@ -348,10 +350,10 @@ public class GUIBar extends JToolBar {
 			@Override public void actionPerformed(ActionEvent e) {
 				FileDialog fd = new FileDialog(new JFrame(), "Save configuration...", FileDialog.SAVE);
 				int[] t = Data.getTime();
-				fd.setFile(String.format("*.config", t[0], t[1], t[2]));
+				fd.setFile("*.config");
 				fd.requestFocus();
 				fd.setVisible(true);
-				h.saveConfig(fd.getDirectory()+fd.getFile());
+				if (fd.getDirectory() != null && fd.getFile() != null) h.saveConfig(fd.getDirectory()+fd.getFile());
 			}
 		});
 		for (JButton b : new JButton[] {config, saveConf}) {

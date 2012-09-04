@@ -4,18 +4,22 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
-
 import java.awt.Font;
 
 public class Data {
 	public static final String DEFAULT_CAPTURE_PATH = "out/screenshots/";
 	public static final boolean NO_TGA = true;
 	
+	public static boolean fileExists(String path) {
+		return new File(path).exists();
+	}
+
 	public static String[] fileRead(String path) {
 		System.out.print(String.format("Reading file '%s'...", path));
 		
@@ -52,6 +56,7 @@ public class Data {
 	}
 	
 	public static KpixFileReader readKpixDataFile(String path) {
+		if (path == "null") return null;
 		try {
 			System.out.printf("Reading Binary Datafile '%s'...\n", path);
 			return new KpixFileReader(new File(path));
@@ -62,6 +67,21 @@ public class Data {
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	public static void saveFile(String[] lines, String fileName) {
+		File save = new File(fileName);
+		PrintWriter pw = null;
+		try {
+			save.createNewFile();
+			pw = new PrintWriter(new FileWriter(save));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		for (String s : lines) {
+			pw.println(s);
+		}
+		pw.close();
 	}
 	
 	public static File getCaptureFile(boolean checkDir) {
@@ -93,6 +113,15 @@ public class Data {
 		} else {
 			return new File(String.format("%sCapture-%d.png", DEFAULT_CAPTURE_PATH, n));
 		}
+	}
+	
+	public static int[] getTime() {
+		long t = System.currentTimeMillis();
+		int s = (int) (t/1000);
+		int m = (int) (s/60);
+		int h = (int) (m/60) - 19;
+		
+		return new int[] {h%24, m%60, s%60};
 	}
 	
 	public static float[][] parseData(String path) {
@@ -167,15 +196,10 @@ public class Data {
 		int[] d = new int[1024];
 		float min = in[0], max = in[0];
 		
-		float avg = 0;
-		
 		for (float f : in) {
 			if (f < min) min = f;
 			else if (f > max) max = f;
-			avg += f;
 		}
-		
-		avg /= 1024;
 		
 		for (int i = 0; i < 1024 && i < in.length; i++) {
 			d[i] = scale(in[i], min, max);
@@ -216,8 +240,6 @@ public class Data {
 		buffer.flip();
 		return buffer;
 	}
-	
-	
 }
 
 
