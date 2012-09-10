@@ -1,6 +1,7 @@
 package com.display;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.FlowLayout;
@@ -11,18 +12,26 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+import java.util.Enumeration;
 
+import javax.swing.AbstractButton;
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JTable;
 import javax.swing.JToolBar;
+import javax.swing.colorchooser.AbstractColorChooserPanel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.table.DefaultTableModel;
@@ -340,7 +349,9 @@ public class GUIBar extends JToolBar {
 				fd.setFile("*.config");
 				fd.requestFocus();
 				fd.setVisible(true);
-				String[] lines = Data.fileRead(fd.getDirectory()+fd.getFile());
+				String path = fd.getDirectory()+fd.getFile();
+				if (path == null || path.contains("nullnull")) return;
+				String[] lines = Data.fileRead(path);
 				configure(lines);
 				h.sendMessage("Loaded config file '" + fd.getFile() + "'!");
 			}
@@ -349,7 +360,6 @@ public class GUIBar extends JToolBar {
 		saveConf.addActionListener(new ActionListener() {
 			@Override public void actionPerformed(ActionEvent e) {
 				FileDialog fd = new FileDialog(new JFrame(), "Save configuration...", FileDialog.SAVE);
-				int[] t = Data.getTime();
 				fd.setFile("*.config");
 				fd.requestFocus();
 				fd.setVisible(true);
@@ -370,7 +380,84 @@ public class GUIBar extends JToolBar {
 			l.setFont(Data.getFont(10));
 		}
 		
+		final JColorChooser jcc = new JColorChooser();
+		jcc.setChooserPanels(new AbstractColorChooserPanel[] {jcc.getChooserPanels()[1]});
+		jcc.setPreviewPanel(new JPanel());
 		
+		JRadioButton lowRadio = new JRadioButton("Low");
+		JRadioButton highRadio = new JRadioButton("High");
+		JRadioButton zeroRadio = new JRadioButton("Zero");
+		JButton resetColor = new JButton("Reset");
+		resetColor.addActionListener(new ActionListener() {
+			@Override public void actionPerformed(ActionEvent e) {
+				h.setColor(0, Color.blue);
+				h.setColor(1, Color.red);
+				h.setColor(2, Color.green);
+			}
+		});
+		
+		final ButtonGroup radios = new ButtonGroup();
+		for (int i = 0; i < 3; i++) {
+			JRadioButton b = new JRadioButton[]{lowRadio, highRadio, zeroRadio}[i];
+			radios.add(b);
+			b.setFocusable(false);
+			final int index = i;
+			b.addActionListener(new ActionListener() {
+				@Override public void actionPerformed(ActionEvent e) {
+					jcc.setColor(h.getColor(index));
+				}
+			});
+		}
+		
+		jcc.getSelectionModel().addChangeListener(new ChangeListener() {
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				int i = 0;
+				for (Enumeration<AbstractButton> b = radios.getElements(); b.hasMoreElements();) {
+					JRadioButton rb = (JRadioButton) b.nextElement();
+					if (rb.isSelected()) break;
+					i++;
+				}
+				h.setColor(i, jcc.getColor());
+			}
+		});
+		lowRadio.setSelected(true);
+		
+		JPanel colorPanel = new JPanel();
+		colorPanel.setLayout(new BoxLayout(colorPanel, BoxLayout.Y_AXIS));
+		colorPanel.add(lowRadio);
+		colorPanel.add(highRadio);
+		colorPanel.add(zeroRadio);
+		colorPanel.add(resetColor);
+		resetColor.setFocusable(false);
+		colorPanel.setPreferredSize(new Dimension(100, 100));
+		
+		final JDialog jccd = new JDialog(new JFrame(), "Choose a color...");
+		jccd.setLayout(new FlowLayout());
+		jccd.add(colorPanel, FlowLayout.LEFT);
+		jccd.add(jcc, FlowLayout.CENTER);
+		jccd.pack();
+		jccd.setMinimumSize(jccd.getSize());
+		
+		JButton cc = new JButton("COL");
+		cc.setFocusable(false);
+		cc.setFont(Data.getFont(10));
+		cc.addActionListener(new ActionListener() {
+			@Override public void actionPerformed(ActionEvent e) {
+				int i = 0;
+				for (Enumeration<AbstractButton> b = radios.getElements(); b.hasMoreElements();) {
+					JRadioButton rb = (JRadioButton) b.nextElement();
+					if (rb.isSelected()) break;
+					i++;
+				}
+				Color c = h.getColor(i);
+				jcc.setColor(c);
+				jccd.setVisible(true);
+			}
+		});
+		this.add(cc);
+		
+		//
 		if (Data.fileExists("res/def.config")) {
 			configure(Data.fileRead("res/def.config"));
 			h.sendMessage("Loaded config file 'def.config'!");

@@ -1,5 +1,6 @@
 package com.detector;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -26,8 +27,7 @@ public class HexDetector {
 	private int active = 0;
 	private float centralAxisDepth;
 	private float targetAxisDepth = 0;
-	private float yaw;
-	private float pitch;
+	private float pitch, yaw;
 	private float targetYaw = 0, targetPitch = 0;
 	private float xOffset = 0, yOffset = 0;
 	private float targetXOffset = 0, targetYOffset = 0;
@@ -55,6 +55,10 @@ public class HexDetector {
 	private float SCALE_FACTOR = 0.5f;
 	private int highlighted = -1;
 	
+	private Color hiColor = Color.red;
+	private Color loColor = Color.blue;
+	private Color zeroColor = Color.green;
+	
 	private KpixFileReader kpixReader;
 	private String filePath = "none";
 	private String fileName = "none";
@@ -63,6 +67,7 @@ public class HexDetector {
 	private int readerIndex = 0;
 	private int timeStamp = 0;
 	private boolean playing = false;
+	private boolean last = false;
 	private float playSpeed = 1;
 	private int playOffset = 1;
 	private List<Pair<float[], int[]>> dataBuf;
@@ -156,7 +161,7 @@ public class HexDetector {
 		mean = Data.getMean(d);
 	}
 	public float scale(float in) {
-		return (float)(Math.log(Math.log(6*in/mean)));
+		return (float)(Math.log(Math.abs(Math.log(6*in/mean))));
 	}
 	public boolean isCalibrated() { return calibrated; }
 	public boolean isPlaying() { return playing; }
@@ -167,6 +172,21 @@ public class HexDetector {
 	public int getMBoxY() { return mBoxY; }
 	public int getMBoxW() { return mBoxW; }
 	public int getMBoxH() { return mBoxH; }
+	
+	public void setColor(int i, Color c) {
+		switch (i) {
+		case 0: loColor = c; break;
+		case 1: hiColor = c; break;
+		case 2: zeroColor = c; break;
+		}
+	}
+	public Color getColor(int i) {
+		switch (i) {
+		case 0: return loColor; 
+		case 1: return hiColor; 
+		case 2: return zeroColor;
+		} return null;
+	}
 	
 	public HexDetector() {
 		ltr = new TextRenderer(Data.getFont(), false, true);
@@ -246,18 +266,26 @@ public class HexDetector {
 				}
 				
 				if (layerIndex == 0) {
+					float[] hi, lo;
+					hi = hiColor.getColorComponents(null);
+					lo = loColor.getColorComponents(null);
+					
 					if (calibrated && dispMode == 1) {
 						float c = (float) (SCALE_FACTOR*(Math.abs(trueData[index] - means[index]))/variances[index]);
-						gl2.glColor4f(c, 0, 1 - c, alpha);
+//						gl2.glColor4f(c, 0, 1 - c, alpha);
+						gl2.glColor4f((c*hi[0] + (1-c)*lo[0]), (c*hi[1] + (1-c)*lo[1]), (c*hi[2] + (1-c)*lo[2]), alpha);
 					} else {
 						float c = trueData[index];
 						if (c < 12) gl2.glColor4f(0.1f, 0.1f, 0.1f, alpha); 
 						else { 
 							c = scale(c);
-							gl2.glColor4f(c, 0, 1 - c, alpha);
+							gl2.glColor4f((c*hi[0] + (1-c)*lo[0]), (c*hi[1] + (1-c)*lo[1]), (c*hi[2] + (1-c)*lo[2]), alpha);
 						}
 					}
-					if (trueData[index] == 0) gl2.glColor4f(0.0f, 1.0f, 0.0f, alpha);
+					if (trueData[index] == 0) {
+						float[] bad = zeroColor.getColorComponents(null);
+						gl2.glColor4f(bad[0], bad[1], bad[2], alpha);
+					}
 					
 				} else {
 					gl2.glColor4f(1, 1, 1, alpha);
@@ -526,8 +554,10 @@ public class HexDetector {
 			System.out.println("Failed to step data forward.");
 			sendMessage("Failed to step data forward.");
 			playing = false;
+			last = true;
 			return;
 		}
+		last = false;
 		
 		dataBuf.add(new Pair<float[], int[]>(trueData, data));
 		indexBuf.add(readerIndex);
@@ -562,7 +592,6 @@ public class HexDetector {
 	}
 	
 	public void seek(int index) {
-		System.out.println(index);
 		if (kpixReader == null) return;
 		if (readerIndex > index) {
 			resetData();
@@ -656,7 +685,7 @@ public class HexDetector {
 	}
 	
 	public void saveConfig(String fName) {
-		String[] lines = new String[]{
+		String[] lines = new String[]{	
 				calibFileName == fileName ? "browse : " + fileName : "browse : " + calibFilePath,
 				"calibrate : " + (calibrated ? "true" : "false"),
 				calibFileName == fileName ? "" : "browse : " + filePath,
@@ -674,6 +703,25 @@ public class HexDetector {
 		sendMessage("Configuration file '"+fName+"' saved!");
 	}
 	
+	
+	public void dump(int n) {
+		resetData();
+		ArrayList<String> lines = new ArrayList<String>();
+		lines.add("frame pixel adc");
+		int count = n < 1 ? n - 1 : 0;
+		
+		while (count < n) {
+			for (int i = 0; i < 1024; i++) {
+				lines.add(String.format("%d %d %d\n", readerIndex, i, Math.round(trueData[i])));
+			}
+			stepData();
+			if (last) break;
+			if (n > 0) count++;
+		}
+		
+		Data.saveDumpFile(lines.toArray(new String[]{}), fileName.replace("bin", "txt"));
+		sendMessage("Successfully dumped "+String.valueOf(n)+" events to file: "+fileName.replace("bin", "txt"));
+	}
 	
 	public static float[][] getArrays(Grid.tileType type) {
 		if (type == null) return null;

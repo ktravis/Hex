@@ -14,6 +14,7 @@ import java.awt.Font;
 
 public class Data {
 	public static final String DEFAULT_CAPTURE_PATH = "out/screenshots/";
+	public static final String DEFAULT_DUMP_PATH = "out/data_dump/";
 	public static final boolean NO_TGA = true;
 	
 	public static boolean fileExists(String path) {
@@ -82,6 +83,29 @@ public class Data {
 			pw.println(s);
 		}
 		pw.close();
+	}
+	
+	public static void saveDumpFile(String[] lines, String fileName) {
+		File captureDir = new File(DEFAULT_DUMP_PATH);
+		File save = new File(DEFAULT_DUMP_PATH+fileName);
+		PrintWriter pw = null;
+		try {
+			if (!captureDir.exists()) {
+				if (!captureDir.mkdirs()) {
+					System.out.println("Data dump failed.");
+					return;
+				}
+			}
+			save.createNewFile();
+			pw = new PrintWriter(new FileWriter(save));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		for (String s : lines) {
+			pw.println(s);
+		}
+		pw.close();
+		System.out.printf("Successfully dumped %d events to file: '"+DEFAULT_DUMP_PATH+fileName+"'\n", (lines.length-1)/1024);
 	}
 	
 	public static File getCaptureFile(boolean checkDir) {
