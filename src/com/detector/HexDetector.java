@@ -272,7 +272,6 @@ public class HexDetector {
 					
 					if (calibrated && dispMode == 1) {
 						float c = (float) (SCALE_FACTOR*(Math.abs(trueData[index] - means[index]))/variances[index]);
-//						gl2.glColor4f(c, 0, 1 - c, alpha);
 						gl2.glColor4f((c*hi[0] + (1-c)*lo[0]), (c*hi[1] + (1-c)*lo[1]), (c*hi[2] + (1-c)*lo[2]), alpha);
 					} else {
 						float c = trueData[index];
@@ -379,10 +378,8 @@ public class HexDetector {
 			gl2.glMatrixMode(GL2.GL_MODELVIEW);
 		}
 		
-		
 		gtr.beginRendering(w, h);
 		gtr.setSmoothing(false);
-		
 		gtr.setColor(0.0f, 0.0f, 0.0f, mBoxAlpha);
 		int j = showMessages ? mBoxH/25 : 1;
 		for (int i = 0; i < j && i < messages.size(); i++) {
@@ -407,15 +404,26 @@ public class HexDetector {
 				}
 			}
 			if (calibrated) {
+				float[] lo = loColor.getColorComponents(null);
+				float[] hi = hiColor.getColorComponents(null);
+				float[] zero = zeroColor.getColorComponents(null);
+				
 				gtr.draw("scale factor = "+String.valueOf(SCALE_FACTOR), 5, 35 + (labels ? 15 : 0) + (playing ? 15 : 0));
 				gtr.draw("display mode = "+(dispMode > 0 ? "calib" : "abs"), 5, 50 + (labels ? 15 : 0) + (playing ? 15 : 0));
+				gtr.setColor(lo[0], lo[1], lo[2], 1.0f);
+				gtr.draw("low", 5, 65 + (labels ? 15 : 0) + (playing ? 15 : 0));
+				gtr.setColor(hi[0], hi[1], hi[2], 1.0f);
+				gtr.draw("high", 28, 65 + (labels ? 15 : 0) + (playing ? 15 : 0));
+				gtr.setColor(zero[0], zero[1], zero[2], 1.0f);
+				gtr.draw("zero", 57, 65 + (labels ? 15 : 0) + (playing ? 15 : 0));
 			}
+			gtr.setColor(1.0f, 1.0f, 1.0f, 1.0f);
 			gtr.draw("f: " + fileName, 5, h - 15);
 			gtr.draw("c: " + calibFileName, 5, h - 30);
 		}
 		gtr.flush();
 		gtr.endRendering();
-			
+		
 	}
 	
 	public void update() {
@@ -548,7 +556,7 @@ public class HexDetector {
 	        	if (s.getType() != KpixSample.KpixSampleType.KPIX) break;
 	        	trueData[s.getChannel()] = s.getAdc();
 	        }
-	        if (mean == 0) setScale(trueData);
+	        setScale(trueData);
 
 		} catch (Exception e) {
 			System.out.println("Failed to step data forward.");
@@ -613,7 +621,6 @@ public class HexDetector {
 			System.out.print("Calibrating...");
 			sendMessage("Calibrating...");
 			double count = 0;
-//			int offset = 0;
 			Arrays.fill(means, 0);
 			Arrays.fill(variances, 0);
 			Arrays.fill(calibMins, -1);
@@ -623,11 +630,6 @@ public class HexDetector {
 			
 	        while (kpixReader.hasNextRecord()) {
 	        	record = kpixReader.readRecord();
-//	        	if (offset < 5) {
-//	        		offset++;
-//	        		continue;
-//	        	} 
-//	        	offset = 0;
 	        	if (record.getRecordType() != KpixRecord.KpixRecordType.DATA || record.getRecordLength() < 1000) continue;
 	        	
 	        	count++;
@@ -648,7 +650,6 @@ public class HexDetector {
 		        	if (calibMins[index] < 0 || adc < calibMins[index]) calibMins[index] = adc;
 		        	
 		        }
-//	        	if (count > 500) break;
 	        }
 	        for (int i = 0; i < variances.length; i++) {
 	        	variances[i] = (float) Math.sqrt(variances[i]/count);
