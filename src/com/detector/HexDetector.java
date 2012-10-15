@@ -52,6 +52,7 @@ public class HexDetector {
 	private float[] means = new float[1024];
 	private float[] variances = new float[1024];
 	private float[] calibMins = new float[1024];
+	private int[] tTimes = new int[1024];
 	private float SCALE_FACTOR = 0.5f;
 	private int highlighted = -1;
 	
@@ -91,6 +92,7 @@ public class HexDetector {
 	public float[] getData() { return trueData; }
 	public float[] getMins() { return calibMins; }
 	public float[] getMeans() { return means; }
+	public int[] getTimes() { return tTimes; }
 	public void togglePlaying() { playing = !playing; }
 	public void setPlayspeed(float s) { playSpeed = s; if (s < 1 && playing) togglePlaying(); } 
 	public void toggleLabels() { labels = !labels; }
@@ -555,6 +557,8 @@ public class HexDetector {
 	        	s = li.next();
 	        	if (s.getType() != KpixSample.KpixSampleType.KPIX) break;
 	        	trueData[s.getChannel()] = s.getAdc();
+	        	tTimes[s.getChannel()] = s.getTime();
+	        	
 	        }
 	        setScale(trueData);
 

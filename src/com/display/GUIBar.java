@@ -255,16 +255,17 @@ public class GUIBar extends JToolBar {
 			playPanel.add(b);
 		}
 		
-		model = new DefaultTableModel(new Object[]{"index", "ADC", "min", "mean"}, 0) {
+		model = new DefaultTableModel(new Object[]{"index", "ADC", "time"}, 0) {
 			private static final long serialVersionUID = 1L;
 			@Override public boolean isCellEditable(int row, int column) { return false; }
 		};
 		dataTable = new JTable(model);
 		float[] data = h.getData();
 		float[] min = h.getMins();
-		float[] mean = h.getMeans();
+//		float[] mean = h.getMeans();
+		int[] time = h.getTimes();
 		for (int i = 0; i < 1024; i++) {
-			model.addRow(new Object[]{i, data[i], min[i], mean[i]});
+			model.addRow(new Object[]{i, data[i], time[i]});
 		}
 		dataTable.addMouseMotionListener(new MouseMotionListener() {
 			int last = 0;
@@ -282,8 +283,9 @@ public class GUIBar extends JToolBar {
 		dataTable.setAutoCreateRowSorter(false);
 		dataTable.setFocusable(false);
 		TableRowSorter<DefaultTableModel> trs = new TableRowSorter<DefaultTableModel>(model);
-		for (int i = 0; i < 4; i++) {
+		for (int i = 0; i < 3; i++) {
 			trs.setComparator(i, i > 0 ? new NumComparator<Float>() : new NumComparator<Integer>());
+			trs.setComparator(2, new NumComparator<Integer>());
 		}
 		dataTable.setRowSorter(trs);
 		dataPane = new JScrollPane(dataTable);
@@ -467,13 +469,15 @@ public class GUIBar extends JToolBar {
 	public void update() { 
 		float[]	data = h.getData();
 		float[] min = h.getMins();
-		float[] mean = h.getMeans();
+//		float[] mean = h.getMeans();
+		int[] time = h.getTimes();
 
 		for (int i = 0; i < 1024; i++) {
 			int index = (Integer) model.getValueAt(i, 0);
 			model.setValueAt(adjusted ? data[index] - min[index] : data[index], i, 1);
-			model.setValueAt(min[index], i, 2);
-			model.setValueAt(adjusted ? mean[index] - min[index] : mean[index], i, 3);
+//			model.setValueAt(min[index], i, 2);
+//			model.setValueAt(adjusted ? mean[index] - min[index] : mean[index], i, 3);
+			model.setValueAt(time[index], i, 2);
 		}
 	}
 	
