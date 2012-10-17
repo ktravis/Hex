@@ -59,6 +59,8 @@ public class GUIBar extends JToolBar {
 	
 	private boolean adjusted = false;
 	private boolean updateLive = true;
+	
+	private int barWidth = 230;
 
 	
 	
@@ -72,12 +74,12 @@ public class GUIBar extends JToolBar {
 	public void setup() {
 		this.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
 		this.setFloatable(false);
-		this.setPreferredSize(new Dimension(180, GLWindow.DISPLAY_HEIGHT));
+		this.setPreferredSize(new Dimension(barWidth, GLWindow.DISPLAY_HEIGHT));
 
 		displayMenu = new JComboBox<String>(new String[]{"Absolute", "Calibrated"});
 		
 		fileLabel = new JLabel("File: No file selected.");
-		fileLabel.setSize(new Dimension(180, 30));
+		fileLabel.setSize(new Dimension(barWidth, 30));
 		fileLabel.setFont(Data.getFont(10));
 		browse = new JButton("Browse...");
 		browse.setFocusable(false);
@@ -98,7 +100,7 @@ public class GUIBar extends JToolBar {
 		});
 		
 		calibFileLabel = new JLabel("Calib: No file selected.");
-		calibFileLabel.setSize(new Dimension(180, 30));
+		calibFileLabel.setSize(new Dimension(barWidth, 30));
 		calibFileLabel.setFont(Data.getFont(10));
 		calibrate = new JButton("Calibrate");
 		calibrate.setFocusable(false);
@@ -183,6 +185,7 @@ public class GUIBar extends JToolBar {
 		sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.Y_AXIS));
 		coeff = new  FloatSlider(0, 200, 50, 100);
 		cLabel = new JLabel("Scale coeff. : 0.5");
+		cLabel.setHorizontalAlignment(JLabel.CENTER);
 		coeff.addChangeListener(new ChangeListener(){
 			@Override
 			public void stateChanged(ChangeEvent e) {
@@ -193,6 +196,7 @@ public class GUIBar extends JToolBar {
 		coeff.setFocusable(false);
 		sliderPanel.add(coeff);
 		sliderPanel.add(cLabel);
+		
 		
 		speedPanel = new JPanel();
 		speedPanel.setLayout(new BoxLayout(speedPanel, BoxLayout.Y_AXIS));
@@ -255,18 +259,22 @@ public class GUIBar extends JToolBar {
 			playPanel.add(b);
 		}
 		
-		model = new DefaultTableModel(new Object[]{"index", "ADC", "time"}, 0) {
+		model = new DefaultTableModel(new Object[]{"index", "b", "ADC", "time"}, 0) {
 			private static final long serialVersionUID = 1L;
 			@Override public boolean isCellEditable(int row, int column) { return false; }
 		};
 		dataTable = new JTable(model);
-		float[] data = h.getData();
-		float[] min = h.getMins();
-//		float[] mean = h.getMeans();
-		int[] time = h.getTimes();
+		float[][] data = h.getData();
+		float[][] min = h.getMins();
+		int[][] time = h.getTimes();
 		for (int i = 0; i < 1024; i++) {
-			model.addRow(new Object[]{i, data[i], time[i]});
+			for (int j = 0; j < 4; j++) {
+				model.addRow(new Object[]{i, data[i][j], j, time[i][j]});
+			}
 		}
+		dataTable.getColumnModel().getColumn(0).setPreferredWidth(45);
+		dataTable.getColumnModel().getColumn(1).setPreferredWidth(2);
+		
 		dataTable.addMouseMotionListener(new MouseMotionListener() {
 			int last = 0;
 			@Override
@@ -284,21 +292,21 @@ public class GUIBar extends JToolBar {
 		dataTable.setFocusable(false);
 		TableRowSorter<DefaultTableModel> trs = new TableRowSorter<DefaultTableModel>(model);
 		for (int i = 0; i < 3; i++) {
-			trs.setComparator(i, i > 0 ? new NumComparator<Float>() : new NumComparator<Integer>());
-			trs.setComparator(2, new NumComparator<Integer>());
+			trs.setComparator(i, new NumComparator<Integer>());
+			trs.setComparator(1, new NumComparator<Float>());
 		}
 		dataTable.setRowSorter(trs);
 		dataPane = new JScrollPane(dataTable);
 		
 		for (JPanel p : new JPanel[] {filePanel, dropdownPanel, sliderPanel, playPanel, speedPanel, }) {
-			p.setPreferredSize(new Dimension(180, 30));
+			p.setPreferredSize(new Dimension(barWidth, 30));
 			p.setFocusable(false);
 			this.add(p);
 		}
 		dataPane.setFocusable(false);
-		dataPane.setPreferredSize(new Dimension(180, 300));
-		dropdownPanel.setPreferredSize(new Dimension(180, 40));
-		playPanel.setPreferredSize(new Dimension(180, 30));
+		dataPane.setPreferredSize(new Dimension(barWidth, 300));
+		dropdownPanel.setPreferredSize(new Dimension(barWidth, 40));
+		playPanel.setPreferredSize(new Dimension(barWidth, 30));
 		
 		this.add(dataPane);
 		
@@ -467,17 +475,20 @@ public class GUIBar extends JToolBar {
 	}
 	
 	public void update() { 
-		float[]	data = h.getData();
-		float[] min = h.getMins();
+		float[][]	data = h.getData();
+		float[][] min = h.getMins();
 //		float[] mean = h.getMeans();
-		int[] time = h.getTimes();
+		int[][] time = h.getTimes();
 
 		for (int i = 0; i < 1024; i++) {
-			int index = (Integer) model.getValueAt(i, 0);
-			model.setValueAt(adjusted ? data[index] - min[index] : data[index], i, 1);
-//			model.setValueAt(min[index], i, 2);
-//			model.setValueAt(adjusted ? mean[index] - min[index] : mean[index], i, 3);
-			model.setValueAt(time[index], i, 2);
+			for (int j = 0; j < 4; j++) {
+				int index = (Integer) model.getValueAt(4*i + j, 0);
+				model.setValueAt(j, 4*i + j, 1);
+				model.setValueAt(adjusted ? data[index][j] - min[index][j] : data[index][j], 4*i + j, 2);
+	//			model.setValueAt(min[index], i, 2);
+	//			model.setValueAt(adjusted ? mean[index] - min[index] : mean[index], i, 3);
+				model.setValueAt(time[index][j], 4*i + j, 3);
+			}
 		}
 	}
 	

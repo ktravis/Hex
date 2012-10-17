@@ -39,6 +39,7 @@ public class GLWindow extends JFrame {
 	GLProfile glProfile; 
 	GLCapabilities glCapabilities;
 	GLCanvas glCanvas;
+	GLCanvas histCanvas;
 	String[] dataString;
 	JTable dataTable;
 	GUIBar bar;
@@ -112,6 +113,8 @@ public class GLWindow extends JFrame {
 			}
 		});
 		
+		
+		
 		h = new HexDetector();
 		
 		
@@ -130,7 +133,7 @@ public class GLWindow extends JFrame {
 		bar = new GUIBar(h);
 		eastPanel.add(bar);
 		eastPanel.setFocusable(false);
-		eastPanel.setPreferredSize(new Dimension(190, DISPLAY_HEIGHT));
+		eastPanel.setPreferredSize(new Dimension(240, DISPLAY_HEIGHT));
 		mainPanel.add(eastPanel, BorderLayout.LINE_END);
 		
 		this.setMinimumSize(new Dimension(DISPLAY_WIDTH + 200, DISPLAY_HEIGHT + 45));
@@ -201,7 +204,6 @@ public class GLWindow extends JFrame {
 				}
 			} else {
 				s = new GLWindow("Event Display");
-				s.h.setData(Data.parseData(args[0]));
 			}
 		} else {
 			s = new GLWindow("Event Display");
