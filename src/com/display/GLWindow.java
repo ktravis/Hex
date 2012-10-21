@@ -6,6 +6,7 @@ import javax.media.opengl.GLException;
 import javax.media.opengl.GLProfile;
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.awt.GLCanvas;
+import javax.media.opengl.awt.GLJPanel;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JTable;
@@ -39,7 +40,7 @@ public class GLWindow extends JFrame {
 	GLProfile glProfile; 
 	GLCapabilities glCapabilities;
 	GLCanvas glCanvas;
-	GLCanvas histCanvas;
+	GLJPanel histCanvas;
 	String[] dataString;
 	JTable dataTable;
 	GUIBar bar;
@@ -56,6 +57,7 @@ public class GLWindow extends JFrame {
 		glProfile = GLProfile.getDefault();
 		glCapabilities = new GLCapabilities(glProfile);
 		glCanvas = new GLCanvas(glCapabilities);
+		histCanvas = new GLJPanel();
 		
 		setup();
 	}
@@ -105,7 +107,23 @@ public class GLWindow extends JFrame {
                 wasPlaying = h.isPlaying();
             }
         });
-		
+		histCanvas.addGLEventListener( new GLEventListener() {
+            @Override
+            public void reshape( GLAutoDrawable glautodrawable, int x, int y, int width, int height ) {
+                Screen.setup( glautodrawable.getGL().getGL2(), width, height );
+            }
+            @Override
+            public void init( GLAutoDrawable glautodrawable ) {
+            }
+            @Override
+            public void dispose( GLAutoDrawable glautodrawable ) {
+            }
+            @Override
+            public void display( GLAutoDrawable glautodrawable ) {
+                Screen.render2D( glautodrawable.getGL().getGL2(), glautodrawable.getWidth(), glautodrawable.getHeight());
+            }
+        });
+			
 		this.addWindowListener( new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
 				dispose();
@@ -114,9 +132,7 @@ public class GLWindow extends JFrame {
 		});
 		
 		
-		
 		h = new HexDetector();
-		
 		
 		JPanel mainPanel = new JPanel();
 		mainPanel.setLayout(new BorderLayout());
@@ -125,9 +141,12 @@ public class GLWindow extends JFrame {
 		JPanel eastPanel = new JPanel();
 		
 		glCanvas.setPreferredSize(new Dimension(DISPLAY_WIDTH, DISPLAY_HEIGHT));
+		histCanvas.setPreferredSize(new Dimension(DISPLAY_WIDTH, 200));
 		
 		centerPanel.add(glCanvas, BorderLayout.CENTER);
-		centerPanel.setPreferredSize(new Dimension(DISPLAY_WIDTH, DISPLAY_HEIGHT));
+		centerPanel.add(histCanvas, BorderLayout.SOUTH);
+		
+		centerPanel.setPreferredSize(new Dimension(DISPLAY_WIDTH, DISPLAY_HEIGHT + 200));
 		mainPanel.add(centerPanel, BorderLayout.CENTER);
 		
 		bar = new GUIBar(h);
@@ -160,8 +179,9 @@ public class GLWindow extends JFrame {
 			}
 		});
 		
-		FPSAnimator animator = new FPSAnimator(glCanvas, 60);
+		FPSAnimator animator = new FPSAnimator(60);
 		animator.add(glCanvas);
+		animator.add(histCanvas);
 		animator.start();
 		
 		this.setVisible(true);
