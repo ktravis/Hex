@@ -11,14 +11,18 @@ public class MouseHandler extends MouseAdapter {
 	float lastx, lasty;
 	float newx, newy;
 	private Button down = Button.NONE;
+	private Mode mode = Mode.NAV;
 	
 	public enum Button { NONE, LEFT, RIGHT, MIDDLE, }
+	public enum Mode { NAV, HIST, }
 	
 	HexDetector detector;
 	
 	public MouseHandler(HexDetector h) {
 		detector = h;
 	}
+	
+	public void setMode(Mode m) { this.mode = m; }
 
 	@Override 
 	public void mousePressed(MouseEvent e) {
@@ -57,7 +61,11 @@ public class MouseHandler extends MouseAdapter {
 			dx = newx - lastx;
 			dy = newy - lasty;
 			
-			detector.updateOrientation(dx, dy);
+			switch (mode) {
+			case NAV : detector.updateOrientation(dx, dy); break;
+			case HIST : detector.moveHistHandle((int)lastx, (int)dx); break;
+			}
+			
 		} else if (down == Button.RIGHT) {
 			lastx = newx;
 			lasty = newy;
@@ -68,7 +76,10 @@ public class MouseHandler extends MouseAdapter {
 			dx = newx - lastx;
 			dy = newy - lasty;
 			
-			detector.moveAxis(dx/2.0f, dy/2.0f);
+			switch (mode) {
+			case NAV : detector.moveAxis(dx/2.0f, dy/2.0f); break;
+			case HIST : break;
+			}
 		}
 		
 	}
@@ -77,14 +88,25 @@ public class MouseHandler extends MouseAdapter {
 	public void mouseMoved(MouseEvent e) {
 		int mx = e.getX();
 		int my = e.getY();
-		if (mx < detector.getMBoxX() + detector.getMBoxW() && mx > detector.getMBoxX() && my > detector.getMBoxY()) detector.showMessages(true);
-		else detector.showMessages(false);
+		
+		switch (mode) {
+		case NAV : {
+					if (mx < detector.getMBoxX() + detector.getMBoxW() && mx > detector.getMBoxX() && my > detector.getMBoxY()) detector.showMessages(true);
+					else detector.showMessages(false); break; 
+					}
+		case HIST : break;
+		}
+		
 	}
 	
 	@Override
 	public void mouseWheelMoved(MouseEvent e) {
 		float dr = e.getWheelRotation();
-		detector.zoom(dr * 10);
+		
+		switch (mode) {
+		case NAV : detector.zoom(dr * 10); break;
+		case HIST : break;
+		}
 	}
 	
 }

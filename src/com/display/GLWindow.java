@@ -110,7 +110,7 @@ public class GLWindow extends JFrame {
 		histCanvas.addGLEventListener( new GLEventListener() {
             @Override
             public void reshape( GLAutoDrawable glautodrawable, int x, int y, int width, int height ) {
-                Screen.setup( glautodrawable.getGL().getGL2(), width, height );
+                Screen.setup2D( glautodrawable.getGL().getGL2(), width, height );
             }
             @Override
             public void init( GLAutoDrawable glautodrawable ) {
@@ -120,7 +120,9 @@ public class GLWindow extends JFrame {
             }
             @Override
             public void display( GLAutoDrawable glautodrawable ) {
-                Screen.render2D( glautodrawable.getGL().getGL2(), glautodrawable.getWidth(), glautodrawable.getHeight());
+//                Screen.render2D( glautodrawable.getGL().getGL2(), glautodrawable.getWidth(), glautodrawable.getHeight());
+        		
+            	h.drawHist( glautodrawable.getGL().getGL2(), glautodrawable.getWidth(), glautodrawable.getHeight());
             }
         });
 			
@@ -155,10 +157,14 @@ public class GLWindow extends JFrame {
 		eastPanel.setPreferredSize(new Dimension(240, DISPLAY_HEIGHT));
 		mainPanel.add(eastPanel, BorderLayout.LINE_END);
 		
-		this.setMinimumSize(new Dimension(DISPLAY_WIDTH + 200, DISPLAY_HEIGHT + 45));
+		this.setMinimumSize(new Dimension(DISPLAY_WIDTH + 200, DISPLAY_HEIGHT + 245));
 		this.add(mainPanel);
 		this.pack();
 
+		MouseHandler histHandler = new MouseHandler(h);
+		histHandler.setMode(MouseHandler.Mode.HIST);
+		new AWTMouseAdapter(histHandler).addTo(histCanvas);
+		
 		
 		MouseHandler inputHandler = new MouseHandler(h);
 		new AWTMouseAdapter(inputHandler).addTo(glCanvas);

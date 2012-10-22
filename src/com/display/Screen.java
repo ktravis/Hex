@@ -36,14 +36,14 @@ public class Screen {
         gl2.glLoadIdentity();
         
         gl2.glOrtho(0, width, height, 0, 0, 1);
-        gl2.glMatrixMode(GL2.GL_MODELVIEW);
         
-        gl2.glEnable(GL2.GL_DEPTH_TEST);
-        gl2.glDepthFunc(GL2.GL_LEQUAL);
-        
-        
+        gl2.glDisable(GL2.GL_DEPTH_TEST);
         gl2.glEnable(GL2.GL_BLEND);
         gl2.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
+        
+        gl2.glMatrixMode(GL2.GL_MODELVIEW);
+        gl2.glLoadIdentity();
+        
 	}
 	
 	
@@ -56,9 +56,13 @@ public class Screen {
         h.drawHUD(gl2, width, height);
     }
 	protected static void render2D(GL2 gl2, int width, int height) {
-        gl2.glClear( GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT );
+        gl2.glClear( GL.GL_COLOR_BUFFER_BIT);
 
-        gl2.glLoadIdentity();
+        gl2.glColor3i(0,255,0);
+        gl2.glBegin(GL2.GL_POINTS);
+        gl2.glVertex2f(width/2, height/2);
+        gl2.glEnd();
+        
         
     }
 	

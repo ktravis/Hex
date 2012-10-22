@@ -13,6 +13,7 @@ import util.KpixDataRecord;
 import util.KpixSample;
 
 import com.detector.Grid.tileType;
+import com.display.GLWindow;
 import com.jogamp.opengl.util.awt.TextRenderer;
 
 import util.Data;
@@ -20,7 +21,7 @@ import util.KpixFileReader;
 
 
 public class HexDetector {
-	private TextRenderer ltr, gtr;
+	private TextRenderer ltr, gtr, htr;
 	ArrayList<Grid> layers = new ArrayList<Grid>();
 	public static final int BUFFER_SIZE = 16;
 	public static final int INIT_LAYERS = 1; 
@@ -38,6 +39,8 @@ public class HexDetector {
 	private float mBoxAlpha = 1.0f;
 	private int mCounter = 50;
 	private ArrayList<String> messages;
+	private int histWidth = GLWindow.DISPLAY_WIDTH;
+	private int histHeight = 200;
 	private int mBoxY = 0;
 	private int mBoxX = 0;
 	private int mBoxW = 375;
@@ -47,12 +50,15 @@ public class HexDetector {
 	private float zoom = -100;
 	private float targetZoom = zoom;
 	private float[][]	trueData = new float[1024][4];
-//	private int[][] data = new int[1024][4];
 	private float mean = 0;
 	private float[][] means = new float[1024][4];
 	private float[][] variances = new float[1024][4];
 	private float[][] calibMins = new float[1024][4];
 	private int[][] tTimes = new int[1024][4];
+	private int lowTime, hiTime = 1;
+	private int lowHandle = 0;
+	private int hiHandle = 1;
+	private int lowHandleX, hiHandleX;
 	private int currBucket = 0;
 	private float SCALE_FACTOR = 0.5f;
 	private int highlighted = -1;
@@ -194,6 +200,7 @@ public class HexDetector {
 	public HexDetector() {
 		ltr = new TextRenderer(Data.getFont(), false, true);
 		gtr = new TextRenderer(Data.getFont(14), false, true);
+		htr = new TextRenderer(Data.getFont(10), false, true);
 		
 		messages = new ArrayList<String>();
 		sendMessage("Running.");
@@ -252,6 +259,7 @@ public class HexDetector {
 			float depth = -(layerIndex - 1) * 40 - centralAxisDepth;
 			
 			for (int index = 0; index < 1024; index++) {
+				if (tTimes[index][currBucket] < lowHandle || tTimes[index][currBucket] > hiHandle) continue;
 				gl2.glPushMatrix();
 				gl2.glTranslatef(y[index]/850, -x[index]/850, depth);
 				
@@ -427,6 +435,71 @@ public class HexDetector {
 		
 	}
 	
+	public void drawHist(GL2 gl2, int w, int h) {
+		histWidth = w;
+		histHeight = h;
+		
+		hiHandleX = hiHandleX > w - 50 ? w - 50 : hiHandleX;
+		hiHandleX = hiHandleX < 50 ? 50 : hiHandleX;
+		lowHandleX = lowHandleX < 50 ? 50 : lowHandleX;
+		lowHandleX = lowHandleX > w - 50 ? w - 50 : lowHandleX;
+		
+		
+		gl2.glClear(GL2.GL_COLOR_BUFFER_BIT);
+		gl2.glPushMatrix();
+		
+		gl2.glBegin(GL2.GL_LINES);
+		gl2.glColor3f(1, 1, 1);
+		gl2.glVertex2i(50, 30);
+		gl2.glVertex2i(50, h - 30);
+		gl2.glVertex2i(50, h - 30);
+		gl2.glVertex2i(w - 50, h - 30);
+		
+		if (calibrated) {
+			gl2.glColor3f(1, 0, 0);
+			for (int i = 0; i < 1024; i++) {
+				int x = 51 + (w - 101)*(tTimes[i][currBucket])/(hiTime + 1);
+				int y = (int) (.25 * (h - 60) * ((Math.abs(trueData[i][currBucket] - means[i][currBucket]))/variances[i][currBucket]));
+				gl2.glVertex2i(x, h - 30 - y);
+				gl2.glVertex2i(x, h - 30);
+				
+			}
+			
+			//handles
+			
+			
+			gl2.glColor4f(1, 1, 1, .85f);
+			
+			gl2.glVertex2i(lowHandleX, 40);
+			gl2.glVertex2i(lowHandleX, h - 40);
+			
+			gl2.glVertex2i(hiHandleX, 40);
+			gl2.glVertex2i(hiHandleX, h - 40);
+			//
+		}
+		gl2.glEnd();
+		gl2.glPopMatrix();
+		
+		gl2.glMatrixMode(GL2.GL_MODELVIEW);
+		gl2.glLoadIdentity();
+		htr.beginRendering(w, h);
+		htr.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+		htr.draw("time", w/2, 15);
+		htr.draw(String.valueOf(lowTime), 50, 15);
+		htr.draw(String.valueOf(hiTime), w - 60, 15);
+		htr.draw("ADC", 15, h/2);
+		if (calibrated) {
+			htr.draw(String.valueOf(lowHandle), lowHandleX - 4, h - 25);
+			htr.draw(String.valueOf(hiHandle), hiHandleX - 4, h - 25);
+		} else {
+			htr.draw("Please perform calibration.", w/2 - 50, h/2);
+		}
+		htr.flush();
+		htr.endRendering();
+		gl2.glMatrixMode(GL2.GL_PROJECTION);
+		
+	}
+	
 	public void update() {
 		targetAxisDepth = getAxisDepth();
 		
@@ -463,6 +536,23 @@ public class HexDetector {
 				playOffset = 1;
 			} else playOffset++;
 		}
+	}
+	
+	public void moveHistHandle(int lastx, int deltax) {
+		if (!calibrated) return;
+		if (lastx > hiHandleX) {
+			hiHandleX += deltax;
+		} else if (lastx < lowHandleX) {
+			lowHandleX += deltax;
+		} else if (lastx - lowHandleX < (hiHandleX - lowHandleX)/2) {
+			lowHandleX += deltax;
+		} else {
+			hiHandleX += deltax;
+		}
+		if (hiHandleX < lowHandleX) hiHandleX = lowHandleX + 1;
+		
+		lowHandle = lowTime + (lowHandleX - 50)*(hiTime - lowTime)/(histWidth - 101);
+		hiHandle = lowTime + (hiHandleX - 50)*(hiTime - lowTime)/(histWidth - 101);
 	}
 	
 	public void updateOrientation(float dx, float dy) {
@@ -504,15 +594,17 @@ public class HexDetector {
 		if (index > 0 && index < 1024) highlighted = index;
 	}
 	
-//	public void setData(float[][] d) {
-//		trueData = d[0];
-//		data = new int[d[1].length];
-//		Arrays.fill(data, 0);
-//		for (int i = 0; i < data.length; i++) {
-//			data[i] = (int)d[1][i];
-//		}
-//		
-//	}
+	public void scaleTimes() {
+		lowTime = hiTime = tTimes[0][currBucket];
+		for (int p = 0; p < 1024; p++) {
+//			for (int b = 0; b < 4; b++) {
+				lowTime = (tTimes[p][currBucket] < lowTime) && (tTimes[p][currBucket] > 0) ? tTimes[p][currBucket] : lowTime;
+				hiTime = tTimes[p][currBucket] > hiTime ? tTimes[p][currBucket] : hiTime;
+//			}
+		}
+		lowHandleX = (histWidth - 101)*(lowHandle - lowTime)/(hiTime - lowTime) + 50;
+		hiHandleX = (histWidth - 101)*(hiHandle - lowTime)/(hiTime - lowTime) + 50;
+	}
 	
 	public void setKpixReader(KpixFileReader r) { 
 		if (r == null) return;
@@ -533,7 +625,9 @@ public class HexDetector {
 			Pair<float[][], int[][]> d = dataBuf.get(marker);
 			trueData = d.x;
 			tTimes = d.y;
+			scaleTimes();
 			readerIndex = indexBuf.get(marker);
+			
 			return;
 		}
 		
@@ -569,6 +663,7 @@ public class HexDetector {
 		}
 		last = false;
 		
+		scaleTimes();
 		dataBuf.add(new Pair<float[][], int[][]>(trueData, tTimes));
 		indexBuf.add(readerIndex);
 		marker = dataBuf.size() - 1;
@@ -586,6 +681,7 @@ public class HexDetector {
 		Pair<float[][], int[][]> d = dataBuf.get(marker);
 		trueData = d.x;
 		tTimes = d.y;
+		scaleTimes();
 		readerIndex = indexBuf.get(marker);
 	}
 	
@@ -677,6 +773,9 @@ public class HexDetector {
 		System.out.println(" done.");
 		sendMessage("Calibrating... done!");
 		stepData();
+		scaleTimes();
+		lowHandleX = lowTime;
+		hiHandleX = hiTime;
 	}
 	
 	public String currFileName() { return fileName; }

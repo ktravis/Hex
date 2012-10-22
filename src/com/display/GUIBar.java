@@ -50,7 +50,7 @@ public class GUIBar extends JToolBar {
 	private JPanel filePanel, displayPanel, dropdownPanel, sliderPanel, playPanel, speedPanel, labelPanel, configPanel;
 	private JButton browse, calibrate, reset, rew, pp, step, config, saveConf; 
 	private FloatSlider coeff;
-	private JComboBox<String> displayMenu, labelMenu;
+	private JComboBox displayMenu, labelMenu;
 	private JSlider speed;
 	private JLabel fileLabel, calibFileLabel, cLabel, sLabel;
 	private JScrollPane dataPane;
@@ -64,9 +64,9 @@ public class GUIBar extends JToolBar {
 
 	
 	
-	public GUIBar(HexDetector d) {
+	public GUIBar(HexDetector detector) {
 		super(JToolBar.VERTICAL);
-		h = d;
+		h = detector;
 		setup();
 	}
 	
@@ -74,9 +74,9 @@ public class GUIBar extends JToolBar {
 	public void setup() {
 		this.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 0));
 		this.setFloatable(false);
-		this.setPreferredSize(new Dimension(barWidth, GLWindow.DISPLAY_HEIGHT));
+		this.setPreferredSize(new Dimension(barWidth, GLWindow.DISPLAY_HEIGHT + 245));
 
-		displayMenu = new JComboBox<String>(new String[]{"Absolute", "Calibrated"});
+		displayMenu = new JComboBox(new String[]{"Absolute", "Calibrated"});
 		
 		fileLabel = new JLabel("File: No file selected.");
 		fileLabel.setSize(new Dimension(barWidth, 30));
@@ -151,7 +151,7 @@ public class GUIBar extends JToolBar {
 		displayPanel.add(displayMenu, BorderLayout.CENTER);
 		dropdownPanel.add(displayPanel);
 		
-		labelMenu = new JComboBox<String>(new String[] {"delta", "ADC", "% delta", "Indices", "ADC - min"});
+		labelMenu = new JComboBox(new String[] {"delta", "ADC", "% delta", "Indices", "ADC - min"});
 		labelMenu.addActionListener(new ActionListener() {
 			int last = 1;
 			@Override
@@ -171,7 +171,7 @@ public class GUIBar extends JToolBar {
 		labelsLabel.setFont(Data.getFont(10));
 		labelPanel = new JPanel();
 		
-		for (JComboBox<String> cb : new JComboBox[]{displayMenu, labelMenu}) {
+		for (JComboBox cb : new JComboBox[]{displayMenu, labelMenu}) {
 			cb.setFont(Data.getFont(10));
 			cb.setFocusable(false);
 			cb.setPreferredSize(new Dimension(80, 15));
@@ -466,6 +466,20 @@ public class GUIBar extends JToolBar {
 			}
 		});
 		this.add(cc);
+		
+		JPanel histPanel = new JPanel();
+		histPanel.setLayout(new FlowLayout());
+		JButton resetHandles = new JButton("reset handles");
+		resetHandles.setFocusable(false);
+		resetHandles.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				h.scaleTimes();
+			}
+		});
+		histPanel.add(resetHandles);
+		
+		this.add(histPanel);
 		
 		//
 		if (Data.fileExists("res/def.config")) {

@@ -62,9 +62,9 @@ public class Data {
 			System.out.printf("Reading Binary Datafile '%s'...\n", path);
 			return new KpixFileReader(new File(path));
 		} catch (FileNotFoundException e) {
-			System.out.printf("File '%s' not found.", path);
+			System.out.printf("File '%s' not found.\n", path);
 		} catch (IOException e) {
-			System.out.printf("Error reading file '%s'.", path);
+			System.out.printf("Error reading file '%s'.\n", path);
 			e.printStackTrace();
 		}
 		return null;

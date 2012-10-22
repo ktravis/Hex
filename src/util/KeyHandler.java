@@ -39,8 +39,9 @@ public class KeyHandler extends KeyAdapter {
 			if (code == KeyEvent.VK_Y) detector.stepData();
 			if (code == KeyEvent.VK_T) detector.toggleLabels();
 			if (code == KeyEvent.VK_P) detector.togglePlaying();
+			if (code == KeyEvent.VK_SPACE) detector.togglePlaying();
 			if (code == KeyEvent.VK_C) canCapture = owner.capture(canCapture);
-			if (code == KeyEvent.VK_D) detector.dump(100);
+//			if (code == KeyEvent.VK_D) detector.dump(100);
 			if (code == KeyEvent.VK_I) detector.resetData();
 			if (code == KeyEvent.VK_U) detector.stepDataBack();
 			if (code == KeyEvent.VK_L) detector.cycleLabelMode();
