@@ -6,11 +6,25 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.awt.Font;
+import java.beans.XMLDecoder;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.stream.XMLStreamReader;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.xml.sax.SAXException;
+
+import com.detector.CalibrationData;
+
 
 public class Data {
 	public static final String DEFAULT_CAPTURE_PATH = "out/screenshots/";
@@ -54,6 +68,30 @@ public class Data {
 		System.out.print(" done.\n");
 		
 		return lines;
+	}
+	
+	public static CalibrationData readXML(String path) {
+//		if (path == "null") return null;
+//		
+//		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+//		try {
+//			DocumentBuilder db = dbf.newDocumentBuilder();
+//			Document d = db.parse(new File(path));
+//			Element root = d.getDocumentElement();
+//			return new CalibrationData(root);
+//		} catch (ParserConfigurationException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (SAXException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		
+		
+		return null;
 	}
 	
 	public static KpixFileReader readKpixDataFile(String path) {

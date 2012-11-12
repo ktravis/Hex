@@ -30,6 +30,7 @@ import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.JToolBar;
 import javax.swing.colorchooser.AbstractColorChooserPanel;
 import javax.swing.event.ChangeEvent;
@@ -62,7 +63,6 @@ public class GUIBar extends JToolBar {
 	
 	private int barWidth = 230;
 
-	
 	
 	public GUIBar(HexDetector detector) {
 		super(JToolBar.VERTICAL);
@@ -151,7 +151,7 @@ public class GUIBar extends JToolBar {
 		displayPanel.add(displayMenu, BorderLayout.CENTER);
 		dropdownPanel.add(displayPanel);
 		
-		labelMenu = new JComboBox(new String[] {"delta", "ADC", "% delta", "Indices", "ADC - min"});
+		labelMenu = new JComboBox(new String[] {"delta", "ADC", "% delta", "Indices", "ADC - min", "bucket"});
 		labelMenu.addActionListener(new ActionListener() {
 			int last = 1;
 			@Override
@@ -258,6 +258,23 @@ public class GUIBar extends JToolBar {
 			b.setMargin(new Insets(2, 1, 1, 2));
 			playPanel.add(b);
 		}
+		JLabel seekLabel = new JLabel("seek:");
+		seekLabel.setFont(Data.getFont(10));
+		final JTextField seekField = new JTextField(5);
+		seekField.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					int index = Integer.valueOf(seekField.getText());
+					h.seek(index);
+					GLWindow.getWindows()[0].getComponentAt(1,1).requestFocus();
+				} catch (NumberFormatException nfe) {return;}
+			}
+		});
+		JPanel seekPanel = new JPanel();
+		seekPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
+		seekPanel.add(seekLabel);
+		seekPanel.add(seekField);
 		
 		model = new DefaultTableModel(new Object[]{"index", "b", "ADC", "time"}, 0) {
 			private static final long serialVersionUID = 1L;
@@ -265,7 +282,6 @@ public class GUIBar extends JToolBar {
 		};
 		dataTable = new JTable(model);
 		float[][] data = h.getData();
-		float[][] min = h.getMins();
 		int[][] time = h.getTimes();
 		for (int i = 0; i < 1024; i++) {
 			for (int j = 0; j < 4; j++) {
@@ -298,7 +314,7 @@ public class GUIBar extends JToolBar {
 		dataTable.setRowSorter(trs);
 		dataPane = new JScrollPane(dataTable);
 		
-		for (JPanel p : new JPanel[] {filePanel, dropdownPanel, sliderPanel, playPanel, speedPanel, }) {
+		for (JPanel p : new JPanel[] {filePanel, dropdownPanel, sliderPanel, playPanel, seekPanel, speedPanel, }) {
 			p.setPreferredSize(new Dimension(barWidth, 30));
 			p.setFocusable(false);
 			this.add(p);
@@ -474,7 +490,7 @@ public class GUIBar extends JToolBar {
 		resetHandles.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				h.scaleTimes();
+				h.resetHandles();
 			}
 		});
 		histPanel.add(resetHandles);
@@ -491,7 +507,6 @@ public class GUIBar extends JToolBar {
 	public void update() { 
 		float[][]	data = h.getData();
 		float[][] min = h.getMins();
-//		float[] mean = h.getMeans();
 		int[][] time = h.getTimes();
 
 		for (int i = 0; i < 1024; i++) {
@@ -499,8 +514,6 @@ public class GUIBar extends JToolBar {
 				int index = (Integer) model.getValueAt(4*i + j, 0);
 				model.setValueAt(j, 4*i + j, 1);
 				model.setValueAt(adjusted ? data[index][j] - min[index][j] : data[index][j], 4*i + j, 2);
-	//			model.setValueAt(min[index], i, 2);
-	//			model.setValueAt(adjusted ? mean[index] - min[index] : mean[index], i, 3);
 				model.setValueAt(time[index][j], 4*i + j, 3);
 			}
 		}

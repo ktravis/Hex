@@ -36,7 +36,7 @@ public class GLWindow extends JFrame {
 	private static final long serialVersionUID = -1508624949773190945L;
 	
 	public static final int DISPLAY_WIDTH = 720;
-	public static final int DISPLAY_HEIGHT = 540;
+	public static final int DISPLAY_HEIGHT = 440;
 	GLProfile glProfile; 
 	GLCapabilities glCapabilities;
 	GLCanvas glCanvas;
@@ -133,7 +133,6 @@ public class GLWindow extends JFrame {
 			}
 		});
 		
-		
 		h = new HexDetector();
 		
 		JPanel mainPanel = new JPanel();
@@ -211,6 +210,10 @@ public class GLWindow extends JFrame {
 		return false;
 	}
 	
+	@Override
+	public void requestFocus() {
+		glCanvas.requestFocus();
+	}
 	
 	public static void main(String[] args) {
 		
