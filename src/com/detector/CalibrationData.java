@@ -1,37 +1,82 @@
 package com.detector;
 
 import org.simpleframework.xml.*;
+import org.simpleframework.xml.convert.AnnotationStrategy;
+import org.simpleframework.xml.convert.Convert;
+import org.simpleframework.xml.convert.Converter;
 import org.simpleframework.xml.core.Persister;
+import org.simpleframework.xml.stream.InputNode;
+import org.simpleframework.xml.stream.OutputNode;
+
 import java.io.File;
 import java.util.List;
 
 @Root(name="calibrationData",strict=false)
 public class CalibrationData {
+	public static final float COEFF_P = 1.0f;
 	
 	@Element(name="sourceFile")
-	String fileName;
+	public String fileName;
 	@Element(name="user")
-	String user;
+	public String user;
 	@Element(name="timestamp")
-	String timeStamp;
+	public String timeStamp;
 	@Element(name="kpixAsic")
-	KpixAsic kpix;
+	public KpixAsic kpix;
 	
-	
-	
-	public static void main (String[] args) {
-		Serializer serializer = new Persister();
-		File source = new File("res/2012_10_09_18_22_30.bin.xml");
+	public double calibrate(int channelIndex, int bucketIndex, float adc) {
+		Bucket bucket;
 		try {
-			CalibrationData cd = serializer.read(CalibrationData.class, source);
-			System.out.println(cd.fileName);
-			System.out.println(cd.user);
-			System.out.println(cd.timeStamp);
-			System.out.println(cd.kpix.channels.get(3).buckets.get(1).baseRms);
-		} catch (Exception e) {
-			e.printStackTrace();
+			bucket = kpix.channels.get(channelIndex).buckets.get(bucketIndex);
+		} catch (IndexOutOfBoundsException e) {
+			return -1;
+		}
+		if (bucket.calibGain == null || bucket.calibIntercept == null || bucket.calibGain == -1 || bucket.calibIntercept == -1) return -1;
+		return (Math.PI/2 + Math.atan((adc - bucket.calibIntercept)/(bucket.calibGain/Math.pow(10, 15))))*(10/Math.PI);	
+	}
+	
+	public Float[] getData(int channel, int bucket) {
+		Bucket b;
+		try {
+		b = kpix.channels.get(channel).buckets.get(bucket);
+		} catch (IndexOutOfBoundsException e) {
+			return null;
+		}
+		return new Float[] {b.baseMean, b.baseRms, b.baseFitMean, b.baseFitSigma, b.baseFitMeanErr, b.baseFitSigmaErr, b.calibGain, b.calibIntercept, b.calibGainErr, b.calibInterceptErr, b.calibGainRms };
+	}
+	public int getChannelCount() { 
+		return kpix.channels.size();
+	}
+	
+	public static CalibrationData getInstance(String path) throws Exception {
+		Serializer serializer = new Persister(new AnnotationStrategy());
+		File source = new File(path);
+		return serializer.read(CalibrationData.class, source);
+	}
+	public static CalibrationData getInstance(File source) throws Exception {
+		Serializer serializer = new Persister(new AnnotationStrategy());
+		return serializer.read(CalibrationData.class, source);
+	}
+}
+
+class FloatConverter implements Converter<Float> {
+	@Override
+	public Float read(InputNode node) throws Exception {
+		String val = node.getValue();
+		if (node == null || val.contains("nan") || val == null) {
+			return -1f;
+		}
+		else {
+			try { 
+				return Float.valueOf(val); }
+			catch (NumberFormatException e) {
+				e.printStackTrace();
+				return -1f;
+			}
 		}
 	}
+	@Override
+	public void write(OutputNode node, Float value) throws Exception { node.setValue(String.valueOf(value)); }
 }
 
 @Root(name="kpixAsic",strict=false)
@@ -40,55 +85,66 @@ class KpixAsic {
 	String id;
 	
 	@ElementList(inline=true, entry="Channel", required=false)
-	List<Channel> channels;
+	public List<Channel> channels;
 }
 
 @Root(name="Channel",strict=false)
 class Channel {
 	@Attribute(name="id")
-	String id;
+	public String id;
 	
 	@ElementList(entry="Bucket",inline=true,name="Bucket")
-	List<Bucket> buckets;
+	public List<Bucket> buckets;
 	
 }
 
 @Root(name="Bucket",strict=false) 
 class Bucket {
 	@Attribute(name="id")
-	String id;
+	public String id;
 	
 	@Path("Range") 
 	@Element(name="BaseMean",required=false)
-	float baseMean;
+	@Convert(FloatConverter.class)
+	public Float baseMean;
 	@Path("Range")
 	@Element(name="BaseRms",required=false)
-	float baseRms;
+	@Convert(FloatConverter.class)
+	public Float baseRms;
 	@Path("Range")
 	@Element(name="BaseFitMean",required=false)
-	float baseFitMean;
+	@Convert(FloatConverter.class)
+	public Float baseFitMean;
 	@Path("Range")
 	@Element(name="BaseFitSigma",required=false)
-	float baseFitSigma;
+	@Convert(FloatConverter.class)
+	public Float baseFitSigma;
 	@Path("Range")
 	@Element(name="BaseFitMeanErr",required=false)
-	float baseFitMeanErr;
+	@Convert(FloatConverter.class)
+	public Float baseFitMeanErr;
 	@Path("Range")
 	@Element(name="BaseFitSigmaErr",required=false)
-	float baseFitSigmaErr;
+	@Convert(FloatConverter.class)
+	public Float baseFitSigmaErr;
 	@Path("Range")
 	@Element(name="CalibGain",required=false)
-	float calibGain;
+	@Convert(FloatConverter.class)
+	public Float calibGain;
 	@Path("Range")
 	@Element(name="CalibIntercept",required=false)
-	float calibIntercept;
+	@Convert(FloatConverter.class)
+	public Float calibIntercept;
 	@Path("Range")
 	@Element(name="CalibGainErr",required=false)
-	float calibGainErr;
+	@Convert(FloatConverter.class)
+	public Float calibGainErr;
 	@Path("Range")
 	@Element(name="CalibInterceptErr",required=false)
-	float calibInterceptErr;
+	@Convert(FloatConverter.class)
+	public Float calibInterceptErr;
 	@Path("Range")
 	@Element(name="CalibGainRms",required=false)
-	float calibGainRms;
+	@Convert(FloatConverter.class)
+	public Float calibGainRms;
 }

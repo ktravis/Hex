@@ -23,13 +23,9 @@ public class KeyHandler extends KeyAdapter {
 		
 		float dx = 0, dy = 0;
 
-		if (code == KeyEvent.VK_I) dy = 2.0f;
-		if (code == KeyEvent.VK_J) dx = -2.0f;
-		if (code == KeyEvent.VK_K) dy = -2.0f;
-		if (code == KeyEvent.VK_L) dx = 2.0f;
+		int mod = e.getModifiers();
 		
 		if (!holding) {
-			
 			if (code == KeyEvent.VK_ESCAPE) owner.destroy();
 			if (code == KeyEvent.VK_R) detector.resetOrientation();
 			if (code == KeyEvent.VK_Q) detector.prevActive();
@@ -41,7 +37,8 @@ public class KeyHandler extends KeyAdapter {
 			if (code == KeyEvent.VK_P) detector.togglePlaying();
 			if (code == KeyEvent.VK_SPACE) detector.togglePlaying();
 			if (code == KeyEvent.VK_C) canCapture = owner.capture(canCapture);
-//			if (code == KeyEvent.VK_D) detector.dump(100);
+			if (mod == 2 && code == KeyEvent.VK_D) detector.dump(100);
+			else if (code == KeyEvent.VK_D) detector.toggleUI();
 			if (code == KeyEvent.VK_I) detector.resetData();
 			if (code == KeyEvent.VK_U) detector.stepDataBack();
 			if (code == KeyEvent.VK_L) detector.cycleLabelMode();
@@ -50,7 +47,7 @@ public class KeyHandler extends KeyAdapter {
 			if (code > 47 && code < 59) {
 				detector.setActive(code - 48);
 			}
-			holding = true;
+			if (mod == 0) holding = true;
 		} 
 		
 		if (dx != 0 && dy != 0) detector.setAxisPosition(dx, dy);

@@ -6,24 +6,11 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.awt.Font;
-import java.beans.XMLDecoder;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.stream.XMLStreamReader;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.xml.sax.SAXException;
-
-import com.detector.CalibrationData;
 
 
 public class Data {
@@ -70,34 +57,10 @@ public class Data {
 		return lines;
 	}
 	
-	public static CalibrationData readXML(String path) {
-//		if (path == "null") return null;
-//		
-//		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-//		try {
-//			DocumentBuilder db = dbf.newDocumentBuilder();
-//			Document d = db.parse(new File(path));
-//			Element root = d.getDocumentElement();
-//			return new CalibrationData(root);
-//		} catch (ParserConfigurationException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (SAXException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-		
-		
-		return null;
-	}
-	
 	public static KpixFileReader readKpixDataFile(String path) {
 		if (path == "null") return null;
 		try {
-			System.out.printf("Reading Binary Datafile '%s'...\n", path);
+			System.out.printf("Reading Binary Datafile '%s'...", path);
 			return new KpixFileReader(new File(path));
 		} catch (FileNotFoundException e) {
 			System.out.printf("File '%s' not found.\n", path);
@@ -268,6 +231,38 @@ public class Data {
 		}
 		return d;
 	}
+	
+	public static int[][] parseRange(String in) {
+		/* return [[-1]] for ALL, empty array for none
+		 * 
+		 */
+		if (in == null || in.length() < 1) return new int[][]{};
+		ArrayList<int[]> out = new ArrayList<int[]>();
+		
+		String[] picks = in.split("[,\\s]++");
+		for (String p : picks) {
+			if (p.length() < 1) continue;
+			if (p.equals("*")) return new int[][] {{-1}};
+			if (p.matches("\\d+")) out.add(new int[] {Integer.valueOf(p)});
+			else {
+				try {
+					String[] splitPick = p.split("[[\\.\\.]\\-:]+");
+					int start, end;
+					if (splitPick[0].equals("*")) start = 0;
+					else start = Integer.valueOf(splitPick[0]); 
+					if (splitPick[splitPick.length - 1].equals("*")) end = -1;
+					else end = Integer.valueOf(splitPick[splitPick.length - 1]);
+					
+					out.add(end > start || (end == -1 || start == -1) ? new int[] {start, end} : new int[] {end, start});
+				} catch (NumberFormatException e) {
+					System.out.println("Improper range sequence entered - number format exception.");
+					continue;
+				}
+			}
+		}
+		return out.toArray(new int[][] {});
+	}
+	
 	public static int scale(float val, float low, float high) {
 		return (int) (255*(val - low)/(high - low));
 	}

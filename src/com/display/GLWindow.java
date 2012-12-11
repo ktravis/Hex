@@ -46,6 +46,7 @@ public class GLWindow extends JFrame {
 	GUIBar bar;
 	
 	HexDetector h;
+	boolean fullscreen = false;
 	boolean capturing = false;
 	boolean wasPlaying = false;
 	boolean updateLive = true;
@@ -156,9 +157,13 @@ public class GLWindow extends JFrame {
 		eastPanel.setPreferredSize(new Dimension(240, DISPLAY_HEIGHT));
 		mainPanel.add(eastPanel, BorderLayout.LINE_END);
 		
+		if (fullscreen) {
+			this.setUndecorated(true);
+			this.setExtendedState(MAXIMIZED_BOTH);
+		}
+		
 		this.setMinimumSize(new Dimension(DISPLAY_WIDTH + 200, DISPLAY_HEIGHT + 245));
 		this.add(mainPanel);
-		this.pack();
 
 		MouseHandler histHandler = new MouseHandler(h);
 		histHandler.setMode(MouseHandler.Mode.HIST);
@@ -187,10 +192,12 @@ public class GLWindow extends JFrame {
 		FPSAnimator animator = new FPSAnimator(60);
 		animator.add(glCanvas);
 		animator.add(histCanvas);
-		animator.start();
-		
+		this.pack();
 		this.setVisible(true);
+		animator.start();
 		glCanvas.requestFocusInWindow();
+		
+		
 	}
 	
 	public void destroy() {
@@ -214,7 +221,7 @@ public class GLWindow extends JFrame {
 	public void requestFocus() {
 		glCanvas.requestFocus();
 	}
-	
+
 	public static void main(String[] args) {
 		
 		GLWindow s;
@@ -227,8 +234,6 @@ public class GLWindow extends JFrame {
 						System.out.println("java -jar EventDisplay.jar [-b[c] 'path/datafile.bin']");
 					} else {
 						s = new GLWindow("Event Display");
-						s.h.setKpixReader(Data.readKpixDataFile(args[1]));
-						if (args[0].contains("c")) s.h.calibrateData();
 					}
 				}
 			} else {

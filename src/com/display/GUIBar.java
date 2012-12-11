@@ -5,6 +5,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.FlowLayout;
+import java.awt.GraphicsConfiguration;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -55,11 +56,8 @@ public class GUIBar extends JToolBar {
 	private JSlider speed;
 	private JLabel fileLabel, calibFileLabel, cLabel, sLabel;
 	private JScrollPane dataPane;
-	private JCheckBox liveUpdateBox, adjustedCheckBox, labelCheckBox;
+	private JCheckBox labelCheckBox;
 	private DefaultTableModel model;
-	
-	private boolean adjusted = false;
-	private boolean updateLive = true;
 	
 	private int barWidth = 230;
 
@@ -107,8 +105,15 @@ public class GUIBar extends JToolBar {
 		calibrate.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				h.calibrateData();
-				calibFileLabel.setText("Calib: " + h.currFileName());
+				FileDialog fd = new FileDialog(new JFrame(), "Import...", FileDialog.LOAD);
+				fd.setFile("*.xml");
+				fd.requestFocus();
+				fd.setVisible(true);
+				if (fd.getFile() != null) {
+					h.calibrateData(fd.getDirectory()+fd.getFile());
+				}
+				calibFileLabel.setText("Calib: " + h.currCalibName());
+				new CalibDisplay(h.getCalibData());
 				update();
 				displayMenu.setSelectedItem("Calibrated");
 			} 
@@ -182,36 +187,36 @@ public class GUIBar extends JToolBar {
 		dropdownPanel.add(labelPanel);
 		
 		sliderPanel = new JPanel();
-		sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.Y_AXIS));
+		sliderPanel.setLayout(new BoxLayout(sliderPanel, BoxLayout.X_AXIS));
 		coeff = new  FloatSlider(0, 200, 50, 100);
-		cLabel = new JLabel("Scale coeff. : 0.5");
+		cLabel = new JLabel("Scale coeff. : 0.50");
 		cLabel.setHorizontalAlignment(JLabel.CENTER);
 		coeff.addChangeListener(new ChangeListener(){
 			@Override
 			public void stateChanged(ChangeEvent e) {
 				h.setScale(coeff.getScaled());
-				cLabel.setText("Scale coeff. : " + String.valueOf(coeff.getScaled()));
+				cLabel.setText(String.format("Scale coeff. : %.2f", coeff.getScaled()));
 			}
 		});
 		coeff.setFocusable(false);
-		sliderPanel.add(coeff);
 		sliderPanel.add(cLabel);
-		
+		sliderPanel.add(coeff);
 		
 		speedPanel = new JPanel();
-		speedPanel.setLayout(new BoxLayout(speedPanel, BoxLayout.Y_AXIS));
+		speedPanel.setLayout(new BoxLayout(speedPanel, BoxLayout.X_AXIS));
 		speed = new  JSlider(0, 100, 100);
 		sLabel = new JLabel("Playspeed : 100%");
 		speed.addChangeListener(new ChangeListener(){
 			@Override
 			public void stateChanged(ChangeEvent e) {
 				h.setPlayspeed(100.0f/speed.getValue());
-				sLabel.setText("Playspeed : " + String.valueOf(speed.getValue()) + "%");
+				sLabel.setText(String.format("Playspeed : %03d", speed.getValue()) + "%");
 			}
 		});
 		speed.setFocusable(false);
-		speedPanel.add(speed);
 		speedPanel.add(sLabel);
+		speedPanel.add(speed);
+		
 		
 		playPanel = new JPanel();
 		playPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
@@ -260,7 +265,7 @@ public class GUIBar extends JToolBar {
 		}
 		JLabel seekLabel = new JLabel("seek:");
 		seekLabel.setFont(Data.getFont(10));
-		final JTextField seekField = new JTextField(5);
+		final JTextField seekField = new JTextField(3);
 		seekField.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -271,10 +276,23 @@ public class GUIBar extends JToolBar {
 				} catch (NumberFormatException nfe) {return;}
 			}
 		});
+		JLabel channelSelectLabel = new JLabel("channels:");
+		final JTextField channelBox = new JTextField(6);
+		channelBox.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					h.setVisibleChannels(Data.parseRange(channelBox.getText()));
+					GLWindow.getWindows()[0].getComponentAt(1,1).requestFocus();
+				} catch (NumberFormatException nfe) {return;}
+			}
+		});
 		JPanel seekPanel = new JPanel();
 		seekPanel.setLayout(new FlowLayout(FlowLayout.CENTER));
 		seekPanel.add(seekLabel);
 		seekPanel.add(seekField);
+		seekPanel.add(channelSelectLabel);
+		seekPanel.add(channelBox);
 		
 		model = new DefaultTableModel(new Object[]{"index", "b", "ADC", "time"}, 0) {
 			private static final long serialVersionUID = 1L;
@@ -314,7 +332,7 @@ public class GUIBar extends JToolBar {
 		dataTable.setRowSorter(trs);
 		dataPane = new JScrollPane(dataTable);
 		
-		for (JPanel p : new JPanel[] {filePanel, dropdownPanel, sliderPanel, playPanel, seekPanel, speedPanel, }) {
+		for (JPanel p : new JPanel[] {filePanel, dropdownPanel, sliderPanel, playPanel, speedPanel, seekPanel, }) {
 			p.setPreferredSize(new Dimension(barWidth, 30));
 			p.setFocusable(false);
 			this.add(p);
@@ -326,29 +344,6 @@ public class GUIBar extends JToolBar {
 		
 		this.add(dataPane);
 		
-		liveUpdateBox = new JCheckBox("live");
-		liveUpdateBox.setSelected(updateLive);
-		liveUpdateBox.addItemListener(new ItemListener() {
-			@Override
-			public void itemStateChanged(ItemEvent e) {
-				updateLive = e.getStateChange() == ItemEvent.SELECTED ? true : false;
-				h.updateLive = updateLive;
-			}
-		});
-		this.add(liveUpdateBox);
-		
-		adjustedCheckBox = new JCheckBox("adjust");
-		adjustedCheckBox.setSelected(adjusted);
-		adjustedCheckBox.addItemListener(new ItemListener() {
-			@Override
-			public void itemStateChanged(ItemEvent e) {
-				adjusted = e.getStateChange() == ItemEvent.SELECTED ? true : false;
-				h.adjusted = adjusted;
-				update();
-			}
-		});
-		this.add(adjustedCheckBox);
-		
 		labelCheckBox = new JCheckBox("labels");
 		labelCheckBox.setSelected(false);
 		labelCheckBox.addItemListener(new ItemListener() {
@@ -359,7 +354,7 @@ public class GUIBar extends JToolBar {
 			}
 		});
 		this.add(labelCheckBox);
-		for (JCheckBox c : new JCheckBox[] {liveUpdateBox, adjustedCheckBox, labelCheckBox}) {
+		for (JCheckBox c : new JCheckBox[] {labelCheckBox}) {
 			c.setFont(Data.getFont(10));
 			c.setMargin(new Insets(1, 2, 1, 2));
 		}
@@ -401,7 +396,7 @@ public class GUIBar extends JToolBar {
 		configPanel.setFocusable(false);
 		this.add(configPanel);
 		
-		for (JLabel l : new JLabel[]{fileLabel, calibFileLabel, displayLabel, labelsLabel, cLabel, sLabel}) {
+		for (JLabel l : new JLabel[]{fileLabel, calibFileLabel, displayLabel, labelsLabel, cLabel, sLabel, channelSelectLabel}) {
 			l.setFocusable(false);
 			l.setFont(Data.getFont(10));
 		}
@@ -506,17 +501,18 @@ public class GUIBar extends JToolBar {
 	
 	public void update() { 
 		float[][]	data = h.getData();
-		float[][] min = h.getMins();
 		int[][] time = h.getTimes();
 
 		for (int i = 0; i < 1024; i++) {
 			for (int j = 0; j < 4; j++) {
 				int index = (Integer) model.getValueAt(4*i + j, 0);
 				model.setValueAt(j, 4*i + j, 1);
-				model.setValueAt(adjusted ? data[index][j] - min[index][j] : data[index][j], 4*i + j, 2);
+				model.setValueAt(data[index][j], 4*i + j, 2);
 				model.setValueAt(time[index][j], 4*i + j, 3);
 			}
 		}
+		
+		pp.setText(h.isPlaying() ? "Pause" : "Play");
 	}
 	
 	public void configure(String[] config) {
@@ -527,13 +523,16 @@ public class GUIBar extends JToolBar {
 				if (!p[1].contains("null")) h.setKpixReader(Data.readKpixDataFile(p[1].trim()));
 				fileLabel.setText("File: " + (h.currFileName() == null ? "No file selected." : h.currFileName()));
 			}
-			if (p[0].contains("calibrate")) if (p[1].contains("true") && h.currFileName() != null) calibrate.doClick();
+			if (p[0].contains("calibrate")) {
+				if (!p[1].contains("null")) {
+					h.calibrateData(p[1].trim());
+					new CalibDisplay(h.getCalibData());
+				}
+				calibFileLabel.setText("Calib: " + (h.currCalibName() == null ? "No file selected." : h.currCalibName()));
+			}
 			if (p[0].contains("scale")) coeff.setValue((int)(Float.valueOf(p[1])*coeff.scale));
-			if (p[0].contains("update-live")) liveUpdateBox.setSelected(p[1].contains("true"));
-			if (p[0].contains("adjust")) adjustedCheckBox.setSelected(p[1].contains("true"));
 			if (p[0].contains("labels")) labelCheckBox.setSelected(p[1].contains("true"));
 			if (p[0].contains("label-type")) labelMenu.setSelectedItem(p[1].trim());
-			if (p[0].contains("display")) displayMenu.setSelectedIndex(p[1].contains("calib") ? 1 : 0);
 			if (p[0].contains("speed")) speed.setValue(Integer.valueOf(p[1]));
 			if (p[0].contains("zoom")) h.setZoom(Float.valueOf(p[1]));
 			if (p[0].contains("axis")) h.setAxisPosition(-Float.valueOf(p[1].split(",")[0]), Float.valueOf(p[1].split(",")[1]));

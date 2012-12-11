@@ -32,6 +32,7 @@ public class HexDetector {
 	private float targetYaw = 0, targetPitch = 0;
 	private float xOffset = 0, yOffset = 0;
 	private float targetXOffset = 0, targetYOffset = 0;
+	private boolean showUI = true;
 	private boolean labels = false;			
 	private boolean calibrated = false;
 	private boolean showMessages = true;
@@ -49,6 +50,7 @@ public class HexDetector {
 	private int labelMode = 0;
 	private float zoom = -100;
 	private float targetZoom = zoom;
+	private int[][] visible = new int[][] {{-1}};
 	private float[][]	trueData = new float[1024][4];
 	private float mean = 0;
 	private float[][] means = new float[1024][4];
@@ -74,6 +76,7 @@ public class HexDetector {
 	private String fileName = "none";
 	private String calibFilePath = "none";
 	private String calibFileName = "none";
+	private CalibrationData calibrationData;
 	private int readerIndex = 0;
 	private int timeStamp = 0;
 	private boolean playing = false;
@@ -83,7 +86,6 @@ public class HexDetector {
 	private List<Pair<float[][], int[][]>> dataBuf;
 	private int marker = 0;
 	public boolean updateLive = true;
-	public boolean adjusted = false;
 	public class Pair<X, Y> { 
 		  public final X x; 
 		  public final Y y; 
@@ -102,13 +104,15 @@ public class HexDetector {
 	public float[][] getMins() { return calibMins; }
 	public float[][] getMeans() { return means; }
 	public int[][] getTimes() { return tTimes; }
+	public void toggleUI() { showUI = !showUI; }
 	public void togglePlaying() { playing = !playing; }
 	public void setPlayspeed(float s) { playSpeed = s; if (s < 1 && playing) togglePlaying(); } 
 	public void toggleLabels() { labels = !labels; }
 	public void setLabelMode(int i) { labelMode = i; }
 	public void cycleLabelMode() { labelMode++; if (labelMode > 2) labelMode = 0; }
 	public void setDispMode(int i) { dispMode = i; }
-	public void cycleDispMode() { if (calibrated) dispMode = dispMode < 1 ? 1 : 0; else calibrateData();} 
+	public void cycleDispMode() { if (calibrated) dispMode = dispMode < 1 ? 1 : 0; } 
+	public void setVisibleChannels(int[][] range) { visible = range; }
 	public void setActive(int i) { 
 		if (active == i) return;
 		try {
@@ -260,8 +264,31 @@ public class HexDetector {
 			float alpha = 0.5f;
 			if (layerIndex == active) alpha = 1.0f;
 			float depth = -(layerIndex - 1) * 40 - centralAxisDepth;
-			
+			boolean showAll = false;
+			for (int[] r : visible) {
+				if (r.length == 1 && r[0] == -1) {
+					showAll = true;
+					break;
+				}
+			}
 			for (int index = 0; index < 1024; index++) {
+				if (!showAll) {
+					boolean showChannel = false;
+					for (int[] r : visible) {
+						if (r.length > 1) {
+							if (r[0] <= index && (r[1] == -1 || r[1] >= index)) {
+								showChannel = true;
+								break;
+							}
+						} else {
+							if (r[0] == index) {
+								showChannel = true;
+								break;
+							}
+						}
+					}
+					if (!showChannel) continue;
+				}
 				if (tTimes[index][currBucket[index]] < lowHandle || tTimes[index][currBucket[index]] > hiHandle) continue;
 				gl2.glPushMatrix();
 				gl2.glTranslatef(y[index]/850, -x[index]/850, depth);
@@ -278,9 +305,10 @@ public class HexDetector {
 				}
 				
 				if (layerIndex == 0) {
-					float[] hi, lo;
+					float[] hi, lo, zero;
 					hi = hiColor.getColorComponents(null);
 					lo = loColor.getColorComponents(null);
+					zero = zeroColor.getColorComponents(null);
 					
 					for	(int b = 0;b < 4; b++) {
 						if (tTimes[index][b] > lowHandle && tTimes[index][b] < hiHandle) {
@@ -288,28 +316,32 @@ public class HexDetector {
 							break;
 						}
 					}
-
+					
+					//
+					float c = trueData[index][currBucket[index]];
+					//
 					if (calibrated && dispMode == 1) {
-						float c = (float) (SCALE_FACTOR*(Math.abs(trueData[index][currBucket[index]] - means[index][currBucket[index]]))/variances[index][currBucket[index]]);
-						gl2.glColor4f((c*hi[0] + (1-c)*lo[0]), (c*hi[1] + (1-c)*lo[1]), (c*hi[2] + (1-c)*lo[2]), alpha);
+						//float c = (float) (SCALE_FACTOR*(Math.abs(trueData[index][currBucket[index]] - means[index][currBucket[index]]))/variances[index][currBucket[index]]);
+						c = SCALE_FACTOR * (float)calibrationData.calibrate(index, currBucket[index], c);
+						if (c < 0) gl2.glColor4f(zero[0], zero[1], zero[2], alpha); //do something
+//						gl2.glColor4f((c*hi[0] + (1-c)*lo[0]), (c*hi[1] + (1-c)*lo[1]), (c*hi[2] + (1-c)*lo[2]), alpha);
 					} else {
-						float c = trueData[index][currBucket[index]];
+//						float c = trueData[index][currBucket[index]];
 						if (c < 12) gl2.glColor4f(0.1f, 0.1f, 0.1f, alpha); 
 						else { 
 							c = scale(c);
 							gl2.glColor4f((c*hi[0] + (1-c)*lo[0]), (c*hi[1] + (1-c)*lo[1]), (c*hi[2] + (1-c)*lo[2]), alpha);
 						}
 					}
-					if (trueData[index][currBucket[index]] == 0) {
-						float[] bad = zeroColor.getColorComponents(null);
-						gl2.glColor4f(bad[0], bad[1], bad[2], alpha);
+					gl2.glColor4f((c*hi[0] + (1-c)*lo[0]), (c*hi[1] + (1-c)*lo[1]), (c*hi[2] + (1-c)*lo[2]), alpha);
+					if (c == 0) {
+						gl2.glColor4f(zero[0], zero[1], zero[2], alpha);
 					}
-					
 				} else {
 					gl2.glColor4f(1, 1, 1, alpha);
 				}
-				gl2.glBegin(GL2.GL_TRIANGLE_FAN);
 				
+				gl2.glBegin(GL2.GL_TRIANGLE_FAN);
 				for (int j = 0; j < verts.length; j+=3) {
 					gl2.glVertex3f(verts[j], verts[j+1], verts[j+2]);
 				}
@@ -405,42 +437,44 @@ public class HexDetector {
 			gtr.draw(messages.get(i), mBoxX + 4, (25*(i)) + 16);
 		}
 		gtr.flush();
-		gtr.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-		gtr.draw("layers = "+String.valueOf(layers.size()), w - 75, 20);
-		gtr.draw("active = "+String.valueOf(active), w - 75, 5);
-		if (kpixReader != null) {
-			gtr.draw("reader index = "+String.valueOf(readerIndex), 5, 5);
-			gtr.draw("data timestamp = "+String.valueOf(timeStamp), 5, 20);
-			if (playing) gtr.draw("playback speed = "+String.valueOf((int)100.0f/playSpeed)+"%", 5, 35);
-			if (labels) {
-				int offY = playing ? 15 : 0; 
-				switch (labelMode) {
-				case 0: gtr.draw("label mode = delta", 5, 35 + offY); break;
-				case 1: gtr.draw("label mode = ADC", 5, 35 + offY); break;
-				case 2: gtr.draw("label mode = %delta", 5, 35 + offY); break;
-				case 3: gtr.draw("label mode = indices", 5, 35 + offY); break;
-				case 4: gtr.draw("label mode = ADC-min", 5, 35 + offY); break;
-				}
-			}
-			if (calibrated) {
-				float[] lo = loColor.getColorComponents(null);
-				float[] hi = hiColor.getColorComponents(null);
-				float[] zero = zeroColor.getColorComponents(null);
-				
-				gtr.draw("scale factor = "+String.valueOf(SCALE_FACTOR), 5, 35 + (labels ? 15 : 0) + (playing ? 15 : 0));
-				gtr.draw("display mode = "+(dispMode > 0 ? "calib" : "abs"), 5, 50 + (labels ? 15 : 0) + (playing ? 15 : 0));
-				gtr.setColor(lo[0], lo[1], lo[2], 1.0f);
-				gtr.draw("low", 5, 65 + (labels ? 15 : 0) + (playing ? 15 : 0));
-				gtr.setColor(hi[0], hi[1], hi[2], 1.0f);
-				gtr.draw("high", 28, 65 + (labels ? 15 : 0) + (playing ? 15 : 0));
-				gtr.setColor(zero[0], zero[1], zero[2], 1.0f);
-				gtr.draw("zero", 57, 65 + (labels ? 15 : 0) + (playing ? 15 : 0));
-			}
+		if (showUI) {
 			gtr.setColor(1.0f, 1.0f, 1.0f, 1.0f);
-			gtr.draw("f: " + fileName, 5, h - 15);
-			gtr.draw("c: " + calibFileName, 5, h - 30);
+			gtr.draw("layers = "+String.valueOf(layers.size()), w - 75, 20);
+			gtr.draw("active = "+String.valueOf(active), w - 75, 5);
+			if (kpixReader != null) {
+				gtr.draw("reader index = "+String.valueOf(readerIndex), 5, 5);
+				gtr.draw("data timestamp = "+String.valueOf(timeStamp), 5, 20);
+				if (playing) gtr.draw("playback speed = "+String.valueOf((int)100.0f/playSpeed)+"%", 5, 35);
+				if (labels) {
+					int offY = playing ? 15 : 0; 
+					switch (labelMode) {
+					case 0: gtr.draw("label mode = delta", 5, 35 + offY); break;
+					case 1: gtr.draw("label mode = ADC", 5, 35 + offY); break;
+					case 2: gtr.draw("label mode = %delta", 5, 35 + offY); break;
+					case 3: gtr.draw("label mode = indices", 5, 35 + offY); break;
+					case 4: gtr.draw("label mode = ADC-min", 5, 35 + offY); break;
+					}
+				}
+				if (calibrated) {
+					float[] lo = loColor.getColorComponents(null);
+					float[] hi = hiColor.getColorComponents(null);
+					float[] zero = zeroColor.getColorComponents(null);
+					
+					gtr.draw("scale factor = "+String.valueOf(SCALE_FACTOR), 5, 35 + (labels ? 15 : 0) + (playing ? 15 : 0));
+					gtr.draw("display mode = "+(dispMode > 0 ? "calib" : "abs"), 5, 50 + (labels ? 15 : 0) + (playing ? 15 : 0));
+					gtr.setColor(lo[0], lo[1], lo[2], 1.0f);
+					gtr.draw("low", 5, 65 + (labels ? 15 : 0) + (playing ? 15 : 0));
+					gtr.setColor(hi[0], hi[1], hi[2], 1.0f);
+					gtr.draw("high", 28, 65 + (labels ? 15 : 0) + (playing ? 15 : 0));
+					gtr.setColor(zero[0], zero[1], zero[2], 1.0f);
+					gtr.draw("zero", 57, 65 + (labels ? 15 : 0) + (playing ? 15 : 0));
+				}
+				gtr.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+				gtr.draw("f: " + fileName, 5, h - 15);
+				gtr.draw("c: " + calibFileName, 5, h - 30);
+			}
+			gtr.flush();
 		}
-		gtr.flush();
 		gtr.endRendering();
 		
 	}
@@ -699,10 +733,10 @@ public class HexDetector {
 		
 		scaleTimes();
 		
-		histCounts = new int [hiTime - lowTime];
+		histCounts = new int [hiTime - lowTime + 1];
 		for (int i = 0; i < 1024; i++) {
 			for (int j = 0; j < 4; j++) {
-				if (trueData[i][j] > 0) histCounts[tTimes[i][j] - lowTime - 1]++;
+				if (trueData[i][j] > 0) histCounts[tTimes[i][j] - lowTime]++;
 			}
 		}
 		
@@ -753,60 +787,19 @@ public class HexDetector {
 		sendMessage(String.format("Unable to seek index: %d.", index));
 	}
 	
-	public void calibrateData() { 
+	public void calibrateData(String path) { 
 		if (kpixReader == null) return;
 		try {
-			System.out.print("Calibrating...");
-			sendMessage("Calibrating...");
-			double count = 0;
-			for (int i = 0; i < 4; i++) {
-				Arrays.fill(means[i], 0);
-				Arrays.fill(variances[i], 0);
-				Arrays.fill(calibMins[i], -1);
-			}
-			kpixReader.rewind();
-			KpixRecord record = kpixReader.readRecord();
-			count++;
-			
-	        while (kpixReader.hasNextRecord()) {
-	        	record = kpixReader.readRecord();
-	        	if (record.getRecordType() != KpixRecord.KpixRecordType.DATA || record.getRecordLength() < 1000) continue;
-	        	
-	        	count++;
-	        	
-		        List<KpixSample> temp = ((KpixDataRecord)record).getSamples();
-		        ListIterator<KpixSample> li = temp.listIterator();
-		        KpixSample s = li.next();
-		        
-		        while (li.hasNext()) {
-		        	s = li.next();
-		        	if (s.getType() != KpixSample.KpixSampleType.KPIX) continue;
-		        	int index = s.getChannel();
-		        	int adc = s.getAdc();
-		        	double delta =  adc - means[index][currBucket[0]];
-		        	means[index][currBucket[0]] +=  delta/count;
-		        	variances[index][currBucket[0]] += delta*(adc - means[index][currBucket[0]]);
-		        	
-		        	if (calibMins[index][currBucket[0]] < 0 || adc < calibMins[index][currBucket[0]]) calibMins[index][currBucket[0]] = adc;
-		        	
-		        }
-	        }
-	        for (int i = 0; i < variances.length; i++) {
-	        	variances[i][currBucket[i]] = (float) Math.sqrt(variances[i][currBucket[i]]/count);
-	        }
-	        
-
+			System.out.print("\nCalibrating...");
+			calibrationData = CalibrationData.getInstance(path);
 		} catch (Exception e) {
-			System.out.println("Failed to calibrate data.");
-			sendMessage("Failed to calibrate data.");
-			calibrated = false;
 			e.printStackTrace();
+			calibrated = false;
 			return;
 		}
-		
 		calibrated = true;
-		calibFileName = kpixReader.getName();
-		calibFilePath = kpixReader.getPath();
+		calibFileName = calibrationData.fileName;
+		calibFilePath = path;
 		dispMode = 1;
 		kpixReader.rewind();
 		readerIndex = 0;
@@ -814,16 +807,15 @@ public class HexDetector {
 		sendMessage("Calibrating... done!");
 		stepData();
 		scaleTimes();
-//		lowHandleX = lowTime;
-//		hiHandleX = hiTime;
 		resetHandles();
 	}
 	
+	public CalibrationData getCalibData() { return calibrationData; }
 	public String currFileName() { return fileName; }
+	public String currCalibName()  { return calibFileName; }
 	
 	public void sendMessage(String mess) {
 		int[] t = Data.getTime();
-		
 		messages.add(0, String.format("%02d:%02d:%02d ", t[0], t[1], t[2]) + mess);
 		newMessage = true;
 		if (messages.size() > 9) messages.remove(messages.size() - 1);
@@ -835,11 +827,9 @@ public class HexDetector {
 				"calibrate : " + (calibrated ? "true" : "false"),
 				calibFileName == fileName ? "" : "browse : " + filePath,
 				"live-update : " + (updateLive ? "true" : "false"),
-				"adjusted : " + (adjusted ? "true" : "false"), 
 				String.format("scale : %f", SCALE_FACTOR),
 				"labels : " + (labels ? "true" : "false"),
 				"label-type : " + new String[]{"delta", "ADC", "% delta", "indices", "ADC - min"}[labelMode],
-				"display : " + (dispMode > 0 ? "calib" : "abs"), 
 				"speed : " + String.valueOf(playSpeed * 10), 
 				"zoom : " + String.valueOf(zoom),
 				String.format("axis : %f, %f", -targetXOffset, targetYOffset)
