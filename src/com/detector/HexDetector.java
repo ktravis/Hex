@@ -840,20 +840,21 @@ public class HexDetector {
 	
 	
 	public void dump(int n) {
+		if (n < 1) return;
 		resetData();
 		ArrayList<String> lines = new ArrayList<String>();
-		lines.add("frame pixel adc");
+		lines.add("frame pixel bucket adc");
 		int count = n < 1 ? n - 1 : 0;
 		
 		while (count < n) {
 			for (int i = 0; i < 1024; i++) {
 				for (int j = 0; j < 4; j++) {
-					lines.add(String.format("%d %d %d %d\n", readerIndex, i, j, Math.round(trueData[j][i])));
+					lines.add(String.format("%d %d %d %d\n", readerIndex, i, j, Math.round(trueData[i][j])));
 				}
 			}
 			stepData();
 			if (last) break;
-			if (n > 0) count++;
+			count++;
 		}
 		
 		Data.saveDumpFile(lines.toArray(new String[]{}), fileName.replace("bin", "txt"));

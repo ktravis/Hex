@@ -106,7 +106,7 @@ public class Data {
 			pw.println(s);
 		}
 		pw.close();
-		System.out.printf("Successfully dumped %d events to file: '"+DEFAULT_DUMP_PATH+fileName+"'\n", (lines.length-1)/1024);
+		System.out.printf("Successfully dumped %d events to file: '"+DEFAULT_DUMP_PATH+fileName+"'\n", (lines.length-1)/4096);
 	}
 	
 	public static File getCaptureFile(boolean checkDir) {

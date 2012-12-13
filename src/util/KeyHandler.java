@@ -2,6 +2,7 @@ package util;
 
 import com.detector.HexDetector;
 import com.display.GLWindow;
+import com.display.GUIBar;
 import com.jogamp.newt.event.KeyAdapter;
 import com.jogamp.newt.event.KeyEvent;
 
@@ -37,7 +38,7 @@ public class KeyHandler extends KeyAdapter {
 			if (code == KeyEvent.VK_P) detector.togglePlaying();
 			if (code == KeyEvent.VK_SPACE) detector.togglePlaying();
 			if (code == KeyEvent.VK_C) canCapture = owner.capture(canCapture);
-			if (mod == 2 && code == KeyEvent.VK_D) detector.dump(100);
+			if (mod == 2 && code == KeyEvent.VK_D) detector.dump(GUIBar.intPrompt(10));
 			else if (code == KeyEvent.VK_D) detector.toggleUI();
 			if (code == KeyEvent.VK_I) detector.resetData();
 			if (code == KeyEvent.VK_U) detector.stepDataBack();

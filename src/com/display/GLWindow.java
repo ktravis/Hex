@@ -228,12 +228,28 @@ public class GLWindow extends JFrame {
 		if (args.length > 0) {
 			if (args[0].startsWith("-")) {
 				if (args[0].contains("--usage")) {
-					System.out.println("java -jar EventDisplay.jar [-b[c] 'path/datafile.bin']");
+					System.out.println("java -jar EventDisplay.jar [-b 'path/datafile.bin' [-d number]]");
+					System.out.println("\tb : load .bin file");
+					System.out.println("\td : dump specified number of events to text file, and close");
 				} else if (args[0].contains("b")) {
 					if (args.length < 2) {
-						System.out.println("java -jar EventDisplay.jar [-b[c] 'path/datafile.bin']");
+						System.out.println("java -jar EventDisplay.jar [-b 'path/datafile.bin' [-d number]]");
+						System.out.println("\tb : load .bin file");
+						System.out.println("\td : dump specified number of events to text file, and close");
 					} else {
-						s = new GLWindow("Event Display");
+						if (args[2].contains("d")) {
+							try {
+								HexDetector h = new HexDetector();
+								h.setKpixReader(Data.readKpixDataFile(args[1]));
+								h.dump(Integer.valueOf(args[3]));
+							} catch (NumberFormatException e) {
+								System.out.println("java -jar EventDisplay.jar [-b 'path/datafile.bin' [-d number]]");
+								System.out.println("\tb : load .bin file");
+								System.out.println("\td : dump specified number of events to text file, and close");
+							}
+						} else {
+							s = new GLWindow("Event Display");
+						}
 					}
 				}
 			} else {

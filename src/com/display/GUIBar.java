@@ -13,11 +13,14 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.WindowEvent;
 import java.util.Enumeration;
 
+import javax.swing.AbstractAction;
 import javax.swing.AbstractButton;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JColorChooser;
@@ -26,6 +29,7 @@ import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
@@ -542,6 +546,17 @@ public class GUIBar extends JToolBar {
 		}
 	}
 	
+	public static int intPrompt(int def) {
+		JDialog.setDefaultLookAndFeelDecorated(false);
+		try {
+			String input = (String) JOptionPane.showInputDialog(null, "Number of events to dump:", "Dump", JOptionPane.QUESTION_MESSAGE, new ImageIcon(), null, def);
+			if (input == null) return -1;
+			else return Integer.valueOf(input);
+		} catch (NumberFormatException e) {
+			return -1;
+		}
+	}
+	
 	private class FloatSlider extends JSlider {
 		private static final long serialVersionUID = -5143507196060120764L;
 		public float scale;
@@ -554,3 +569,4 @@ public class GUIBar extends JToolBar {
 		}
 	}
 }
+
