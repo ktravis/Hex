@@ -289,7 +289,17 @@ public class HexDetector {
 					}
 					if (!showChannel) continue;
 				}
-				if (tTimes[index][currBucket[index]] < lowHandle || tTimes[index][currBucket[index]] > hiHandle) continue;
+				
+				boolean inViewTimeRange = false;
+				for	(int b = 0;b < 4; b++) {
+					if (tTimes[index][b] >= lowHandle && tTimes[index][b] <= hiHandle) {
+						currBucket[index] = b;
+						inViewTimeRange = true;
+						break;
+					}
+				}				
+				if (!inViewTimeRange) continue;
+				
 				gl2.glPushMatrix();
 				gl2.glTranslatef(y[index]/850, -x[index]/850, depth);
 				
@@ -310,12 +320,6 @@ public class HexDetector {
 					lo = loColor.getColorComponents(null);
 					zero = zeroColor.getColorComponents(null);
 					
-					for	(int b = 0;b < 4; b++) {
-						if (tTimes[index][b] > lowHandle && tTimes[index][b] < hiHandle) {
-							currBucket[index] = b;
-							break;
-						}
-					}
 					
 					//
 					float c = trueData[index][currBucket[index]];
@@ -359,6 +363,24 @@ public class HexDetector {
 				gl2.glRotatef(-90.0f, 0.0f, 0.0f, 1.0f);
 				
 				for (int index = 0; index < 1024; index++) {
+					if (!showAll) {
+						boolean showChannel = false;
+						for (int[] r : visible) {
+							if (r.length > 1) {
+								if (r[0] <= index && (r[1] == -1 || r[1] >= index)) {
+									showChannel = true;
+									break;
+								}
+							} else {
+								if (r[0] == index) {
+									showChannel = true;
+									break;
+								}
+							}
+						}
+						if (!showChannel) continue;
+					}
+					
 					String h = "";
 					if (!calibrated) labelMode = (labelMode == 1) || (labelMode == 3) ? labelMode : 1;
 					switch (labelMode) {
@@ -517,8 +539,8 @@ public class HexDetector {
 			case 0:	for (int c : histCounts) {
 						maxCount = c > maxCount ? c : maxCount;
 					}
-					for (int i = 0; i < hiTime - lowTime; i++) {
-						int x = 51 + (w - 101)*(i)/(hiTime + 1);
+					for (int i = 0; i < hiTime - lowTime + 1; i++) {
+						int x = 51 + (w - 101)*(i)/(hiTime + 1 - lowTime);
 						int y = (int) ((h - 60)*histCounts[i]/maxCount);	
 						gl2.glVertex2i(x, h - 30 - y);
 						gl2.glVertex2i(x, h - 30);
@@ -598,16 +620,18 @@ public class HexDetector {
 	}
 	
 	public void moveHistHandle(int lastx, int deltax) {
+		int space = 2;
+		
 		if (!calibrated) return;
-		if (lastx > hiHandleX) {
-			hiHandleX += deltax;
-		} else if (lastx < lowHandleX) {
+		if (Math.abs(lastx - hiHandleX) < space) {
+			if (lastx > hiHandleX) hiHandleX += deltax;
+			else if (Math.abs(lastx - lowHandleX) < space) {
+				if (Math.abs(lastx - hiHandleX) < Math.abs(lastx - lowHandleX)) hiHandleX += deltax;
+				else lowHandleX += deltax;
+			}
+		} else if (Math.abs(lastx - lowHandleX) < space) {
 			lowHandleX += deltax;
-		} else if (lastx - lowHandleX < (hiHandleX - lowHandleX)/2) {
-			lowHandleX += deltax;
-		} else {
-			hiHandleX += deltax;
-		}
+		} 
 		if (hiHandleX < lowHandleX) hiHandleX = lowHandleX + 1;
 		
 		lowHandle = lowTime + (lowHandleX - 50)*(hiTime - lowTime)/(histWidth - 101);
